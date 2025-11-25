@@ -1,0 +1,84 @@
+"use client";
+
+// Next
+import Link from "next/link";
+import Image from "next/image";
+
+// Assets
+import Logo from "@/public/assets/img/Arctic Base FavIcon.png";
+
+// ShadCn
+import { Card } from "@/components/ui/card";
+
+// Components
+import { LanguageSelector, ThemeSwitcher, LoginModal, SignupModal, BaseButton } from "@/app/components";
+
+// Contexts
+import { useAuth } from "@/contexts/AuthContext";
+
+// Icons
+import { LogOut, User } from "lucide-react";
+
+const BaseNavbar = () => {
+    const { user, logout } = useAuth();
+
+    const handleLogout = async () => {
+        await logout();
+    };
+
+    return (
+        <header className="z-[99]">
+            <nav>
+                <Card className="flex flex-wrap justify-between items-center px-5 gap-5">
+                    <Link href={"/"} className="flex items-center gap-3">
+                        <Image
+                            src={Logo}
+                            alt="Arnivoice Logo"
+                            width={120}
+                            height={60}
+                            loading="eager"
+                                className="w-28 h-auto object-contain dark:invert"
+                            />
+                            <span className="text-3xl font-semibold tracking-wide">
+                            Arcticx
+                        </span>
+                    </Link>
+                    <div className="flex items-center gap-3">
+                        <LanguageSelector />
+                        <ThemeSwitcher />
+                        {user ? (
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">
+                                    {user.email}
+                                </span>
+                                <BaseButton
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleLogout}
+                                    tooltipLabel="Logout"
+                                >
+                                    <LogOut className="w-4 h-4" />
+                                </BaseButton>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <LoginModal>
+                                    <BaseButton variant="outline" size="sm">
+                                        Login
+                                    </BaseButton>
+                                </LoginModal>
+                                <SignupModal>
+                                    <BaseButton variant="default" size="sm">
+                                        Sign Up
+                                    </BaseButton>
+                                </SignupModal>
+                            </div>
+                        )}
+                    </div>
+                </Card>
+            </nav>
+        </header>
+    );
+};
+
+export default BaseNavbar;
