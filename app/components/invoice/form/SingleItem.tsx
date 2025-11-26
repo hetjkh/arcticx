@@ -177,8 +177,8 @@ const SingleItem = ({
 
                     <FormInput
                         name={`${name}[${index}].serviceType`}
-                        label="Service Type"
-                        placeholder="Enter service type"
+                        label="Type of Service"
+                        placeholder="Enter type of service"
                         className="w-[12rem]"
                         vertical
                     />
