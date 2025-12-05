@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 
 // Components
 import { BaseButton } from "@/app/components";
+import StatementPreviewModal from "@/app/components/modals/invoice/StatementPreviewModal";
 
 // Contexts
 import { useInvoiceContext } from "@/contexts/InvoiceContext";
@@ -77,6 +78,7 @@ const SavedInvoicesList = ({ setModalState }: SavedInvoicesListProps) => {
     const [amountMax, setAmountMax] = useState<string>("");
     const [selectedCurrency, setSelectedCurrency] = useState<string>("all");
     const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<number>>(new Set());
+    const [showStatementPreview, setShowStatementPreview] = useState(false);
 
     const { reset } = useFormContext<InvoiceType>();
 
@@ -447,44 +449,20 @@ const SavedInvoicesList = ({ setModalState }: SavedInvoicesListProps) => {
     };
 
     /**
-     * Generate statement from selected invoices
+     * Show statement preview for selected invoices
      */
-    const generateStatement = async () => {
+    const showStatementPreviewModal = () => {
         if (selectedInvoiceIds.size === 0) return;
+        setShowStatementPreview(true);
+    };
 
-        const selectedInvoices = Array.from(selectedInvoiceIds)
+    /**
+     * Get selected invoices
+     */
+    const getSelectedInvoices = (): InvoiceType[] => {
+        return Array.from(selectedInvoiceIds)
             .map((idx) => savedInvoices[idx])
             .filter(Boolean);
-
-        try {
-            const response = await fetch("/api/invoice/statement", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ invoices: selectedInvoices }),
-            });
-
-            if (!response.ok) {
-                throw new Error("Failed to generate statement");
-            }
-
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `statement-${new Date().toISOString().split("T")[0]}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-
-            // Clear selection after successful generation
-            setSelectedInvoiceIds(new Set());
-        } catch (error) {
-            console.error("Error generating statement:", error);
-            alert("Failed to generate statement. Please try again.");
-        }
     };
 
     const renderInvoiceCard = (invoice: InvoiceType, originalIdx: number, key: string | number) => {
@@ -494,7 +472,7 @@ const SavedInvoicesList = ({ setModalState }: SavedInvoicesListProps) => {
                 key={key}
                 className={cn(
                     "p-2 border rounded-sm hover:border-blue-500 hover:shadow-lg cursor-pointer",
-                    isSelected && "border-blue-500 bg-blue-50"
+                    isSelected && "border-blue-600 border-2 bg-blue-100/50 dark:bg-blue-900/20"
                 )}
             >
                 <CardContent className="flex justify-between">
@@ -505,11 +483,11 @@ const SavedInvoicesList = ({ setModalState }: SavedInvoicesListProps) => {
                             onClick={(e) => e.stopPropagation()}
                             className="mt-1"
                         />
-                        <div className="flex-1">
+                        <div className={cn("flex-1", isSelected && "text-gray-900 dark:text-gray-100")}>
                             <p className="font-semibold">
                                 Invoice #{invoice.details.invoiceNumber}{" "}
                             </p>
-                            <small className="text-gray-500">
+                            <small className={cn("text-gray-500", isSelected && "dark:text-gray-300")}>
                                 Date: {parseInvoiceDate(invoice).toLocaleDateString("en-US", DATE_OPTIONS)} | 
                                 Updated: {invoice.details.updatedAt || "N/A"}
                             </small>
@@ -604,8 +582,8 @@ const SavedInvoicesList = ({ setModalState }: SavedInvoicesListProps) => {
 
                     {/* Selection Actions */}
                     {selectedInvoiceIds.size > 0 && (
-                        <div className="flex gap-2 items-center p-2 bg-blue-50 rounded-md border border-blue-200">
-                            <span className="text-sm font-medium">
+                        <div className="flex gap-2 items-center p-2 bg-blue-100/50 dark:bg-blue-900/20 rounded-md border border-blue-300 dark:border-blue-700">
+                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                 {selectedInvoiceIds.size} invoice{selectedInvoiceIds.size !== 1 ? 's' : ''} selected
                             </span>
                             <Button
@@ -618,10 +596,10 @@ const SavedInvoicesList = ({ setModalState }: SavedInvoicesListProps) => {
                             <Button
                                 variant="default"
                                 size="sm"
-                                onClick={generateStatement}
+                                onClick={showStatementPreviewModal}
                                 className="bg-blue-600 hover:bg-blue-700"
                             >
-                                Generate Statement
+                                Preview Statement
                             </Button>
                         </div>
                     )}
@@ -633,6 +611,7 @@ const SavedInvoicesList = ({ setModalState }: SavedInvoicesListProps) => {
                                 variant="ghost"
                                 size="sm"
                                 onClick={selectAllInvoices}
+                                className="text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
                             >
                                 <CheckSquare className="h-4 w-4 mr-1" />
                                 Select All
@@ -898,6 +877,19 @@ const SavedInvoicesList = ({ setModalState }: SavedInvoicesListProps) => {
                     </div>
                 )}
             </div>
+
+            {/* Statement Preview Modal */}
+            <StatementPreviewModal
+                open={showStatementPreview}
+                onOpenChange={(open) => {
+                    setShowStatementPreview(open);
+                    if (!open) {
+                        // Clear selection when modal closes
+                        setSelectedInvoiceIds(new Set());
+                    }
+                }}
+                invoices={getSelectedInvoices()}
+            />
         </>
     );
 };
