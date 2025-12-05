@@ -64,6 +64,7 @@ import InvoiceLoaderModal from "./modals/invoice/InvoiceLoaderModal";
 import InvoiceExportModal from "./modals/invoice/InvoiceExportModal";
 import DownloadSettingsModal from "./modals/invoice/DownloadSettingsModal";
 import SavedPaymentInfoModal from "./modals/invoice/SavedPaymentInfoModal";
+import DefaultPresetsModal from "./modals/invoice/DefaultPresetsModal";
 
 // Custom Selectors
 import SavedInvoicesList from "./modals/invoice/components/SavedInvoicesList";
@@ -143,6 +144,7 @@ export {
     InvoiceExportModal,
     DownloadSettingsModal,
     SavedPaymentInfoModal,
+    DefaultPresetsModal,
     ImportJsonButton,
     SignatureModal,
     DrawSignature,

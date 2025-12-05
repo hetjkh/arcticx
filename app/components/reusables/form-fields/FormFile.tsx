@@ -38,6 +38,7 @@ const FormFile = ({ name, label, placeholder }: FormFileProps) => {
     });
 
     const [base64Image, setBase64Image] = useState<string>(logoImage ?? "");
+    const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     // Sync state with form value changes
@@ -45,16 +46,48 @@ const FormFile = ({ name, label, placeholder }: FormFileProps) => {
         setBase64Image(logoImage ?? "");
     }, [logoImage]);
 
-    const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files![0];
         if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const base64String = event.target!.result as string;
-                setBase64Image(base64String);
-                setValue(name, base64String); // Set the value for form submission
-            };
-            reader.readAsDataURL(file);
+            setUploading(true);
+            try {
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    const base64String = event.target!.result as string;
+                    setBase64Image(base64String);
+                    
+                    // Upload to Cloudinary
+                    try {
+                        const response = await fetch("/api/upload/cloudinary", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                base64String,
+                                folder: "invoify/logos",
+                            }),
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            setBase64Image(data.url);
+                            setValue(name, data.url); // Set Cloudinary URL
+                        } else {
+                            // Fallback to base64 if upload fails
+                            setValue(name, base64String);
+                        }
+                    } catch (error) {
+                        console.error("Upload error:", error);
+                        // Fallback to base64 if upload fails
+                        setValue(name, base64String);
+                    } finally {
+                        setUploading(false);
+                    }
+                };
+                reader.readAsDataURL(file);
+            } catch (error) {
+                console.error("File read error:", error);
+                setUploading(false);
+            }
         }
     };
 
@@ -75,7 +108,11 @@ const FormFile = ({ name, label, placeholder }: FormFileProps) => {
                 render={({ field }) => (
                     <FormItem>
                         <Label>{label}:</Label>
-                        {(base64Image && base64Image.trim() !== "") || (field.value && field.value.trim() !== "") ? (
+                        {uploading ? (
+                            <div className="flex items-center justify-center h-[7rem] w-[10rem]">
+                                <p>Uploading...</p>
+                            </div>
+                        ) : (base64Image && base64Image.trim() !== "") || (field.value && field.value.trim() !== "") ? (
                             <img
                                 id="logoImage"
                                 src={base64Image || field.value}

@@ -16,17 +16,20 @@ import {
   InvoiceLoaderModal,
   InvoiceExportModal,
   DownloadSettingsModal,
+  DefaultPresetsModal,
 } from "@/app/components";
 
 // Contexts
 import { useInvoiceContext } from "@/contexts/InvoiceContext";
 import { useTranslationContext } from "@/contexts/TranslationContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Icons
 import { FileInput, FolderUp, Import, Plus, RotateCcw, Settings } from "lucide-react";
 
 const InvoiceActions = () => {
   const { invoicePdfLoading, newInvoice } = useInvoiceContext();
+  const { user } = useAuth();
 
   const { _t } = useTranslationContext();
   return (
@@ -74,6 +77,9 @@ const InvoiceActions = () => {
                 Download Settings
               </BaseButton>
             </DownloadSettingsModal>
+
+            {/* Manage presets button - only show if user is logged in */}
+            {user && <DefaultPresetsModal />}
           </div>
 
           <div className="flex flex-wrap gap-3">

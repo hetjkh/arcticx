@@ -522,6 +522,7 @@ export const InvoiceContextProvider = ({
     reader.readAsText(file);
   };
 
+
   return (
     <InvoiceContext.Provider
       value={{

@@ -175,15 +175,35 @@ export const SignatureContextProvider = ({
      * Function that fires every time signature file input changes
      * @param e - Event object from file input
      */
-    const handleUploadSignatureChange = (
+    const handleUploadSignatureChange = async (
         e: React.ChangeEvent<HTMLInputElement>
     ) => {
         const file = e.target.files![0];
         if (file) {
             const reader = new FileReader();
-            reader.onload = (event) => {
+            reader.onload = async (event) => {
                 const base64String = event.target!.result as string;
                 setUploadSignatureImg(base64String);
+                
+                // Upload to Cloudinary
+                try {
+                    const response = await fetch("/api/upload/cloudinary", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            base64String,
+                            folder: "invoify/signatures",
+                        }),
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        setUploadSignatureImg(data.url);
+                    }
+                } catch (error) {
+                    console.error("Upload error:", error);
+                    // Keep base64 as fallback
+                }
             };
             reader.readAsDataURL(file);
         }

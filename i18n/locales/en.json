@@ -85,7 +85,22 @@
         "exportInvoice": "Export Invoice",
         "newInvoice": "New Invoice",
         "generatePdf": "Generate PDF",
-        "pdfView": "PDF View"
+        "pdfView": "PDF View",
+        "saveAsDefaults": "Save as Defaults",
+        "managePresets": "Manage Presets",
+        "presets": {
+            "title": "Default Presets",
+            "description": "Save and load your invoice default settings",
+            "presetName": "Preset Name",
+            "presetNamePlaceholder": "Enter preset name (e.g., Company A, Personal, etc.)",
+            "save": "Save Preset",
+            "saving": "Saving...",
+            "cancel": "Cancel",
+            "saveCurrent": "Save Current as Preset",
+            "savedPresets": "Saved Presets",
+            "noPresets": "No presets saved yet. Save your first preset to get started!",
+            "load": "Load"
+        }
     },
     "footer": {
         "developedBy": "Developed by"
