@@ -59,33 +59,6 @@ const DocumentVersionHistory = ({ documentId }: DocumentVersionHistoryProps) => 
         }
     };
 
-    const handleUploadNewVersion = async (document: any) => {
-        // Upload new version using the version endpoint
-        if (!document) return;
-
-        try {
-            const formData = new FormData();
-            formData.append("file", document.file);
-            if (document.description) formData.append("description", document.description);
-
-            const response = await fetch(`/api/document/${documentId}/version`, {
-                method: "POST",
-                body: formData,
-            });
-
-            if (response.ok) {
-                setShowUploadForm(false);
-                fetchDocument();
-            } else {
-                const error = await response.json();
-                alert(error.error || "Failed to upload new version");
-            }
-        } catch (error) {
-            console.error("Error uploading version:", error);
-            alert("Error uploading new version");
-        }
-    };
-
     const formatFileSize = (bytes: number) => {
         if (bytes === 0) return "0 Bytes";
         const k = 1024;
@@ -161,9 +134,12 @@ const DocumentVersionHistory = ({ documentId }: DocumentVersionHistoryProps) => 
                         <CardTitle>Upload New Version</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <DocumentUpload
-                            invoiceId={document.invoiceId}
-                            onUploadSuccess={handleUploadNewVersion}
+                        <DocumentVersionUpload
+                            documentId={documentId}
+                            onUploadSuccess={() => {
+                                setShowUploadForm(false);
+                                fetchDocument();
+                            }}
                             onCancel={() => setShowUploadForm(false)}
                         />
                     </CardContent>
