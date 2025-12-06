@@ -7,6 +7,7 @@ import {
     SignatureModal,
     Subheading,
 } from "@/app/components";
+import DocumentsSection from "./DocumentsSection";
 
 // Contexts
 import { useTranslationContext } from "@/contexts/TranslationContext";
@@ -41,6 +42,9 @@ const InvoiceSummary = () => {
                 {/* Final charges */}
                 <Charges />
             </div>
+
+            {/* Documents section */}
+            <DocumentsSection />
         </section>
     );
 };

@@ -17,7 +17,7 @@ import { LanguageSelector, ThemeSwitcher, LoginModal, SignupModal, BaseButton } 
 import { useAuth } from "@/contexts/AuthContext";
 
 // Icons
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Users } from "lucide-react";
 
 const BaseNavbar = () => {
     const { user, logout } = useAuth();
@@ -44,6 +44,14 @@ const BaseNavbar = () => {
                         </span>
                     </Link>
                     <div className="flex items-center gap-3">
+                        {user && (
+                            <Link href="/clients">
+                                <BaseButton variant="ghost" size="sm" tooltipLabel="Clients">
+                                    <Users className="w-4 h-4 mr-2" />
+                                    Clients
+                                </BaseButton>
+                            </Link>
+                        )}
                         <LanguageSelector />
                         <ThemeSwitcher />
                         {user ? (

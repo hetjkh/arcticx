@@ -32,6 +32,7 @@ import InvoiceDetails from "./invoice/form/sections/InvoiceDetails";
 import Items from "./invoice/form/sections/Items";
 import PaymentInformation from "./invoice/form/sections/PaymentInformation";
 import InvoiceSummary from "./invoice/form/sections/InvoiceSummary";
+import DocumentsSection from "./invoice/form/sections/DocumentsSection";
 import ImportJsonButton from "./invoice/form/sections/ImportJsonButton";
 
 // * Actions
@@ -90,6 +91,14 @@ import LoginModal from "./modals/auth/LoginModal";
 import SignupModal from "./modals/auth/SignupModal";
 
 /* =========================
+   * Client
+   ========================= */
+import ClientList from "./client/ClientList";
+import ClientForm from "./client/ClientForm";
+import ClientDetail from "./client/ClientDetail";
+import ClientSelector from "./client/ClientSelector";
+
+/* =========================
    * Templates
    ========================= */
 // Invoice templates
@@ -123,6 +132,7 @@ export {
     WizardProgress,
     PaymentInformation,
     InvoiceSummary,
+    DocumentsSection,
     CurrencySelector,
     SavedInvoicesList,
     SavedPaymentInfoList,
@@ -160,4 +170,8 @@ export {
     DevDebug,
     LoginModal,
     SignupModal,
+    ClientList,
+    ClientForm,
+    ClientDetail,
+    ClientSelector,
 };

@@ -10,6 +10,7 @@ import {
     FormInput,
     Subheading,
 } from "@/app/components";
+import ClientSelector from "@/app/components/client/ClientSelector";
 
 // Contexts
 import { useTranslationContext } from "@/contexts/TranslationContext";
@@ -42,7 +43,10 @@ const BillToSection = () => {
 
     return (
         <section className="flex flex-col gap-3">
-            <Subheading>{_t("form.steps.fromAndTo.billTo")}:</Subheading>
+            <div className="flex items-center justify-between">
+                <Subheading>{_t("form.steps.fromAndTo.billTo")}:</Subheading>
+            </div>
+            <ClientSelector />
             <FormInput
                 name="receiver.name"
                 label={_t("form.steps.fromAndTo.name")}

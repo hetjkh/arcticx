@@ -12,6 +12,7 @@ import { CSS } from "@dnd-kit/utilities";
 // ShadCn
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 // Components
 import { BaseButton, FormInput, FormTextarea } from "@/app/components";
@@ -69,6 +70,16 @@ const SingleItem = ({
         control,
     });
 
+    const extraDeliverableEnabled = useWatch({
+        name: `${name}[${index}].extraDeliverableEnabled`,
+        control,
+    });
+
+    const extraDeliverableAmount = useWatch({
+        name: `${name}[${index}].extraDeliverableAmount`,
+        control,
+    });
+
     // Currency
     const currency = useWatch({
         name: `details.currency`,
@@ -82,16 +93,19 @@ const SingleItem = ({
     });
 
     useEffect(() => {
-        // Calculate total when rate or VAT changes (quantity is always 1 for passengers)
-        // Total = rate + VAT amount
+        // Calculate total when rate, VAT, or extra deliverable amount changes (quantity is always 1 for passengers)
+        // Total = rate + VAT amount + extra deliverable amount (if enabled)
         if (rate != undefined) {
             const rateValue = Number(rate) || 0;
             const vatValue = Number(vat) || 0;
-            const calculatedTotal = (rateValue + vatValue).toFixed(2);
+            const extraAmount = (extraDeliverableEnabled && extraDeliverableAmount) 
+                ? Number(extraDeliverableAmount) || 0 
+                : 0;
+            const calculatedTotal = (rateValue + vatValue + extraAmount).toFixed(2);
             setValue(`${name}[${index}].total`, calculatedTotal);
             setValue(`${name}[${index}].quantity`, 1);
         }
-    }, [rate, vat, setValue, name, index]);
+    }, [rate, vat, extraDeliverableEnabled, extraDeliverableAmount, setValue, name, index]);
 
     // DnD
     const {
@@ -232,6 +246,44 @@ const SingleItem = ({
                     label="Description"
                     placeholder="Enter description"
                 />
+
+                {/* Extra Deliverable Section */}
+                <div className="space-y-3 border-t pt-4 mt-4">
+                    <div className="flex items-center gap-3">
+                        <Label htmlFor={`extraDeliverableEnabled-${index}`}>
+                            Enable Extra Deliverable Row
+                        </Label>
+                        <Switch
+                            id={`extraDeliverableEnabled-${index}`}
+                            checked={extraDeliverableEnabled || false}
+                            onCheckedChange={(value) => {
+                                setValue(`${name}[${index}].extraDeliverableEnabled`, value);
+                            }}
+                        />
+                    </div>
+
+                    {extraDeliverableEnabled && (
+                        <div className="flex flex-wrap justify-between gap-y-5 gap-x-2">
+                            <FormInput
+                                name={`${name}[${index}].extraDeliverable`}
+                                label="Extra Deliverable"
+                                placeholder="Enter extra deliverable details"
+                                className="flex-1 min-w-[200px]"
+                                vertical
+                            />
+
+                            <FormInput
+                                name={`${name}[${index}].extraDeliverableAmount`}
+                                type="number"
+                                label="Extra Deliverable Amount"
+                                labelHelper={`(${currency})`}
+                                placeholder="Enter amount"
+                                className="w-[8rem]"
+                                vertical
+                            />
+                        </div>
+                    )}
+                </div>
             </div>
             <div>
                 {/* Not allowing deletion for first item when there is only 1 item */}

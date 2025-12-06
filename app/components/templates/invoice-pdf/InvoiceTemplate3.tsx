@@ -175,6 +175,21 @@ const InvoiceTemplate = (data: InvoiceType) => {
                         </td>
                       </tr>
                     )}
+                    {item.extraDeliverableEnabled && (
+                      <tr className="align-top">
+                        <td className="border border-gray-400 px-4 py-4"></td>
+                        <td className="border border-gray-400 px-4 py-4 text-gray-700 break-words">
+                          {item.extraDeliverable || ""}
+                        </td>
+                        <td className="border border-gray-400 px-4 py-4"></td>
+                        <td className="border border-gray-400 px-4 py-4"></td>
+                        <td className="border border-gray-400 px-4 py-4 text-right font-medium">
+                          {item.extraDeliverableAmount 
+                            ? `${formatNumberWithCommas(Number(item.extraDeliverableAmount) || 0)} ${details.currency}`
+                            : ""}
+                        </td>
+                      </tr>
+                    )}
                   </React.Fragment>
                 ))
               )}

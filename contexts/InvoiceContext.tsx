@@ -9,7 +9,7 @@ import React, {
   useState,
 } from "react";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 // RHF
 import { useFormContext } from "react-hook-form";
@@ -73,6 +73,7 @@ export const InvoiceContextProvider = ({
   children,
 }: InvoiceContextProviderProps) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
 
   // Toasts
@@ -128,6 +129,49 @@ export const InvoiceContextProvider = ({
 
     loadInvoices();
   }, [user]);
+
+  // Load invoice by ID from query parameter
+  useEffect(() => {
+    const invoiceId = searchParams?.get("invoiceId");
+    if (invoiceId && user) {
+      const loadInvoiceById = async () => {
+        try {
+          const response = await fetch(`/api/invoice/${invoiceId}`);
+          if (response.ok) {
+            const data = await response.json();
+            const invoice = data.invoice;
+            
+            // Remove database-specific fields
+            if (invoice.id) delete invoice.id;
+            if (invoice._id) delete invoice._id;
+            if (invoice.userId) delete invoice.userId;
+            if (invoice.createdAt) delete invoice.createdAt;
+            
+            // Transform dates
+            if (invoice.details.dueDate) {
+              invoice.details.dueDate = new Date(invoice.details.dueDate);
+            }
+            if (invoice.details.invoiceDate) {
+              invoice.details.invoiceDate = new Date(invoice.details.invoiceDate);
+            }
+            
+            // Reset form with invoice data
+            reset(invoice);
+            
+            // Remove query parameter from URL
+            const url = new URL(window.location.href);
+            url.searchParams.delete("invoiceId");
+            router.replace(url.pathname + url.search);
+          }
+        } catch (error) {
+          console.error("Error loading invoice:", error);
+        }
+      };
+      
+      loadInvoiceById();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, user]);
 
   // Persist full form state with debounce
   useEffect(() => {

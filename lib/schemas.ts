@@ -32,8 +32,8 @@ const fieldValidators = {
     email: z
         .string()
         .email({ message: "Email must be a valid email" })
-        .min(5, { message: "Must be between 5 and 30 characters" })
-        .max(30, { message: "Must be between 5 and 30 characters" }),
+        .min(5, { message: "Must be at least 5 characters" })
+        .max(100, { message: "Must be at most 100 characters" }),
     phone: z
         .string()
         .min(1, { message: "Must be between 1 and 50 characters" })
@@ -114,6 +114,9 @@ const ItemSchema = z.object({
     serviceType: fieldValidators.stringOptional,
     vatPercentage: fieldValidators.stringToNumber.optional(),
     vat: fieldValidators.stringToNumber.optional(),
+    extraDeliverableEnabled: z.boolean().optional(),
+    extraDeliverable: fieldValidators.stringOptional,
+    extraDeliverableAmount: fieldValidators.stringToNumber.optional(),
 });
 
 const PaymentInformationSchema = z.object({
@@ -176,4 +179,16 @@ const InvoiceSchema = z.object({
     details: InvoiceDetailsSchema,
 });
 
-export { InvoiceSchema, ItemSchema };
+const ClientSchema = z.object({
+    name: fieldValidators.name,
+    email: fieldValidators.email,
+    phone: fieldValidators.phone.optional(),
+    city: fieldValidators.city.optional(),
+    country: fieldValidators.country.optional(),
+    address: fieldValidators.address.optional(),
+    zipCode: fieldValidators.zipCode.optional(),
+    notes: fieldValidators.stringOptional,
+    tags: z.array(z.string()).optional(),
+});
+
+export { InvoiceSchema, ItemSchema, ClientSchema };
