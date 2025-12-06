@@ -131,8 +131,8 @@ export async function POST(req: NextRequest) {
 
         const result = await defaultsCollection.insertOne(defaultsData as UserDefaults);
 
-        // Remove _id and userId from response
-        const { _id, userId: _, ...responseDefaults } = defaultsData;
+        // Remove userId from response
+        const { userId: _, ...responseDefaults } = defaultsData;
 
         return NextResponse.json(
             {
