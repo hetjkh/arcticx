@@ -273,6 +273,14 @@ const SingleItem = ({
                             />
 
                             <FormInput
+                                name={`${name}[${index}].extraDeliverableServiceType`}
+                                label="Type of Service"
+                                placeholder="Enter service type"
+                                className="w-[8rem]"
+                                vertical
+                            />
+
+                            <FormInput
                                 name={`${name}[${index}].extraDeliverableAmount`}
                                 type="number"
                                 label="Extra Deliverable Amount"

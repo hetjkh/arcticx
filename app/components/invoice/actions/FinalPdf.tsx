@@ -27,7 +27,6 @@ export default function FinalPdf() {
         downloadPdf,
         printPdf,
         saveInvoice,
-        sendPdfToMail,
     } = useInvoiceContext();
 
     return (
@@ -85,7 +84,7 @@ export default function FinalPdf() {
                     Save
                 </BaseButton>
 
-                <SendPdfToEmailModal sendPdfToMail={sendPdfToMail}>
+                <SendPdfToEmailModal>
                     <BaseButton
                         tooltipLabel="Send invoice PDF to mail"
                         size="sm"

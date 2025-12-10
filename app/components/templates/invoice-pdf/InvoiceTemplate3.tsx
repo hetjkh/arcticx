@@ -162,6 +162,23 @@ const InvoiceTemplate = (data: InvoiceType) => {
                         {details.currency}
                       </td>
                     </tr>
+                    {item.extraDeliverableEnabled && (
+                      <tr className="align-top">
+                        <td className="border border-gray-400 px-4 py-4"></td>
+                        <td className="border border-gray-400 px-4 py-4 text-gray-700 break-words">
+                          {item.extraDeliverable || ""}
+                        </td>
+                        <td className="border border-gray-400 px-4 py-4"></td>
+                        <td className="border border-gray-400 px-4 py-4 text-gray-700 break-words">
+                          {item.extraDeliverableServiceType || "-"}
+                        </td>
+                        <td className="border border-gray-400 px-4 py-4 text-right font-medium">
+                          {item.extraDeliverableAmount 
+                            ? `${formatNumberWithCommas(Number(item.extraDeliverableAmount) || 0)} ${details.currency}`
+                            : ""}
+                        </td>
+                      </tr>
+                    )}
                     {showVat && item.vat !== undefined && Number(item.vat) > 0 && (
                       <tr className="align-top">
                         <td className="border border-gray-400 px-4 py-2 text-gray-700" colSpan={4}>
@@ -172,21 +189,6 @@ const InvoiceTemplate = (data: InvoiceType) => {
                         <td className="border border-gray-400 px-4 py-2 text-right font-medium">
                           {formatNumberWithCommas(Number(item.vat) || 0)}{" "}
                           {details.currency}
-                        </td>
-                      </tr>
-                    )}
-                    {item.extraDeliverableEnabled && (
-                      <tr className="align-top">
-                        <td className="border border-gray-400 px-4 py-4"></td>
-                        <td className="border border-gray-400 px-4 py-4 text-gray-700 break-words">
-                          {item.extraDeliverable || ""}
-                        </td>
-                        <td className="border border-gray-400 px-4 py-4"></td>
-                        <td className="border border-gray-400 px-4 py-4"></td>
-                        <td className="border border-gray-400 px-4 py-4 text-right font-medium">
-                          {item.extraDeliverableAmount 
-                            ? `${formatNumberWithCommas(Number(item.extraDeliverableAmount) || 0)} ${details.currency}`
-                            : ""}
                         </td>
                       </tr>
                     )}

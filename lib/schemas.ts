@@ -116,6 +116,7 @@ const ItemSchema = z.object({
     vat: fieldValidators.stringToNumber.optional(),
     extraDeliverableEnabled: z.boolean().optional(),
     extraDeliverable: fieldValidators.stringOptional,
+    extraDeliverableServiceType: fieldValidators.stringOptional,
     extraDeliverableAmount: fieldValidators.stringToNumber.optional(),
 });
 
