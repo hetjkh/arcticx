@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 // ShadCn
@@ -65,13 +65,11 @@ const ClientDetail = ({ clientId }: ClientDetailProps) => {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        fetchClientDetails();
-    }, [clientId]);
-
-    const fetchClientDetails = async () => {
+    const fetchClientDetails = useCallback(async () => {
         try {
-            const response = await fetch(`/api/client/${clientId}`);
+            const response = await fetch(`/api/client/${clientId}`, {
+                cache: "no-store",
+            });
             if (response.ok) {
                 const data = await response.json();
                 setClient(data.client);
@@ -86,7 +84,34 @@ const ClientDetail = ({ clientId }: ClientDetailProps) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [clientId, router]);
+
+    useEffect(() => {
+        fetchClientDetails();
+    }, [fetchClientDetails]);
+
+    // Refresh data when page becomes visible (user navigates back to this page)
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === "visible") {
+                fetchClientDetails();
+                router.refresh();
+            }
+        };
+
+        const handleFocus = () => {
+            fetchClientDetails();
+            router.refresh();
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        window.addEventListener("focus", handleFocus);
+
+        return () => {
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+            window.removeEventListener("focus", handleFocus);
+        };
+    }, [fetchClientDetails, router]);
 
     const handleCreateInvoice = () => {
         if (client) {

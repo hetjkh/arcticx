@@ -55,7 +55,7 @@ export async function GET(
             };
         });
 
-        return NextResponse.json(
+        const response = NextResponse.json(
             {
                 client: {
                     ...clientData,
@@ -65,6 +65,13 @@ export async function GET(
             },
             { status: 200 }
         );
+        
+        // Prevent caching to ensure fresh data
+        response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+        response.headers.set("Pragma", "no-cache");
+        response.headers.set("Expires", "0");
+        
+        return response;
     } catch (error) {
         console.error("Get client error:", error);
         return NextResponse.json(

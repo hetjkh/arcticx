@@ -449,10 +449,27 @@ export const InvoiceContextProvider = ({
           });
 
           if (response.ok) {
-            // Remove from local state
-            const updatedInvoices = [...savedInvoices];
-            updatedInvoices.splice(index, 1);
-            setSavedInvoices(updatedInvoices);
+            // Reload invoices from database to ensure consistency across all views
+            try {
+              const listResponse = await fetch("/api/invoice/list", {
+                cache: "no-store",
+              });
+              if (listResponse.ok) {
+                const data = await listResponse.json();
+                setSavedInvoices(data.invoices || []);
+              } else {
+                // Fallback: Remove from local state if reload fails
+                const updatedInvoices = [...savedInvoices];
+                updatedInvoices.splice(index, 1);
+                setSavedInvoices(updatedInvoices);
+              }
+            } catch (reloadError) {
+              console.error("Error reloading invoices:", reloadError);
+              // Fallback: Remove from local state if reload fails
+              const updatedInvoices = [...savedInvoices];
+              updatedInvoices.splice(index, 1);
+              setSavedInvoices(updatedInvoices);
+            }
           } else {
             const error = await response.json();
             toast({
