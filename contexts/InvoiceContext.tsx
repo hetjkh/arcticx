@@ -457,11 +457,25 @@ export const InvoiceContextProvider = ({
               if (listResponse.ok) {
                 const data = await listResponse.json();
                 setSavedInvoices(data.invoices || []);
+                
+                // Dispatch custom event to notify other components (like ClientDetail) to refresh
+                if (typeof window !== "undefined") {
+                  window.dispatchEvent(new CustomEvent("invoiceDeleted", {
+                    detail: { invoiceId: (invoice as any).id }
+                  }));
+                }
               } else {
                 // Fallback: Remove from local state if reload fails
                 const updatedInvoices = [...savedInvoices];
                 updatedInvoices.splice(index, 1);
                 setSavedInvoices(updatedInvoices);
+                
+                // Dispatch event even on fallback
+                if (typeof window !== "undefined") {
+                  window.dispatchEvent(new CustomEvent("invoiceDeleted", {
+                    detail: { invoiceId: (invoice as any).id }
+                  }));
+                }
               }
             } catch (reloadError) {
               console.error("Error reloading invoices:", reloadError);
@@ -469,6 +483,13 @@ export const InvoiceContextProvider = ({
               const updatedInvoices = [...savedInvoices];
               updatedInvoices.splice(index, 1);
               setSavedInvoices(updatedInvoices);
+              
+              // Dispatch event even on fallback
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("invoiceDeleted", {
+                  detail: { invoiceId: (invoice as any).id }
+                }));
+              }
             }
           } else {
             const error = await response.json();
@@ -494,6 +515,13 @@ export const InvoiceContextProvider = ({
 
         const updatedInvoicesJSON = JSON.stringify(updatedInvoices);
         localStorage.setItem("savedInvoices", updatedInvoicesJSON);
+        
+        // Dispatch custom event to notify other components (like ClientDetail) to refresh
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("invoiceDeleted", {
+            detail: { invoiceId: (invoice as any).id || invoice.details?.invoiceNumber }
+          }));
+        }
       }
     }
   };

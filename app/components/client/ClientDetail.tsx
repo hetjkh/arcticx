@@ -104,12 +104,20 @@ const ClientDetail = ({ clientId }: ClientDetailProps) => {
             router.refresh();
         };
 
+        // Listen for invoice deletion events to refresh client history
+        const handleInvoiceDeleted = () => {
+            fetchClientDetails();
+            router.refresh();
+        };
+
         document.addEventListener("visibilitychange", handleVisibilityChange);
         window.addEventListener("focus", handleFocus);
+        window.addEventListener("invoiceDeleted", handleInvoiceDeleted);
 
         return () => {
             document.removeEventListener("visibilitychange", handleVisibilityChange);
             window.removeEventListener("focus", handleFocus);
+            window.removeEventListener("invoiceDeleted", handleInvoiceDeleted);
         };
     }, [fetchClientDetails, router]);
 
