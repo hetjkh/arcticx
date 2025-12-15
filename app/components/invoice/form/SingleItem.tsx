@@ -65,6 +65,11 @@ const SingleItem = ({
         control,
     });
 
+    const vatPercentage = useWatch({
+        name: `${name}[${index}].vatPercentage`,
+        control,
+    });
+
     const vat = useWatch({
         name: `${name}[${index}].vat`,
         control,
@@ -91,6 +96,25 @@ const SingleItem = ({
         name: `details.pdfTemplate`,
         control,
     });
+
+    // Calculate VAT amount automatically from VAT percentage ONLY
+    // Example: if you enter 5 (%) then VAT amount becomes 50
+    useEffect(() => {
+        if (vatPercentage != undefined && vatPercentage !== "") {
+            const vatPercentValue = Number(vatPercentage) || 0;
+
+            if (vatPercentValue >= 0) {
+                // Custom rule: VAT amount is 10x the VAT percentage (5% -> 50)
+                const calculatedVatAmount = (vatPercentValue * 10).toFixed(2);
+                setValue(`${name}[${index}].vat`, calculatedVatAmount);
+            } else {
+                setValue(`${name}[${index}].vat`, "0");
+            }
+        } else {
+            // If VAT percentage is cleared, reset VAT amount
+            setValue(`${name}[${index}].vat`, "0");
+        }
+    }, [vatPercentage, setValue, name, index]);
 
     useEffect(() => {
         // Calculate total when rate, VAT, or extra deliverable amount changes (quantity is always 1 for passengers)
@@ -222,9 +246,10 @@ const SingleItem = ({
                         type="number"
                         label="VAT Amount"
                         labelHelper={`(${currency})`}
-                        placeholder="Enter VAT amount"
+                        placeholder="Auto-calculated"
                         className="w-[8rem]"
                         vertical
+                        readOnly
                     />
 
                     <div className="flex flex-col gap-2">
