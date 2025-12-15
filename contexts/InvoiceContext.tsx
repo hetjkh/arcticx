@@ -441,14 +441,35 @@ export const InvoiceContextProvider = ({
     if (index >= 0 && index < savedInvoices.length) {
       const invoice = savedInvoices[index];
       
-      if (user && (invoice as any).id) {
+      // Get invoice ID - check both 'id' and '_id' fields
+      const invoiceId = (invoice as any).id || (invoice as any)._id;
+      
+      if (user && invoiceId) {
         // Delete from database
         try {
-          const response = await fetch(`/api/invoice/${(invoice as any).id}`, {
+          console.log("Deleting invoice with ID:", invoiceId);
+          const response = await fetch(`/api/invoice/${invoiceId}`, {
             method: "DELETE",
           });
 
           if (response.ok) {
+            const result = await response.json();
+            console.log("Delete response:", result);
+            
+            // Dispatch custom event immediately to notify other components (like ClientDetail) to refresh
+            // This ensures the client detail page updates even if invoice list reload fails
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("invoiceDeleted", {
+                detail: { invoiceId: invoiceId }
+              }));
+            }
+            
+            // Show success toast
+            toast({
+              title: "Success",
+              description: "Invoice deleted successfully",
+            });
+            
             // Reload invoices from database to ensure consistency across all views
             try {
               const listResponse = await fetch("/api/invoice/list", {
@@ -457,25 +478,12 @@ export const InvoiceContextProvider = ({
               if (listResponse.ok) {
                 const data = await listResponse.json();
                 setSavedInvoices(data.invoices || []);
-                
-                // Dispatch custom event to notify other components (like ClientDetail) to refresh
-                if (typeof window !== "undefined") {
-                  window.dispatchEvent(new CustomEvent("invoiceDeleted", {
-                    detail: { invoiceId: (invoice as any).id }
-                  }));
-                }
               } else {
+                console.error("Failed to reload invoices after delete");
                 // Fallback: Remove from local state if reload fails
                 const updatedInvoices = [...savedInvoices];
                 updatedInvoices.splice(index, 1);
                 setSavedInvoices(updatedInvoices);
-                
-                // Dispatch event even on fallback
-                if (typeof window !== "undefined") {
-                  window.dispatchEvent(new CustomEvent("invoiceDeleted", {
-                    detail: { invoiceId: (invoice as any).id }
-                  }));
-                }
               }
             } catch (reloadError) {
               console.error("Error reloading invoices:", reloadError);
@@ -483,16 +491,10 @@ export const InvoiceContextProvider = ({
               const updatedInvoices = [...savedInvoices];
               updatedInvoices.splice(index, 1);
               setSavedInvoices(updatedInvoices);
-              
-              // Dispatch event even on fallback
-              if (typeof window !== "undefined") {
-                window.dispatchEvent(new CustomEvent("invoiceDeleted", {
-                  detail: { invoiceId: (invoice as any).id }
-                }));
-              }
             }
           } else {
             const error = await response.json();
+            console.error("Delete failed:", error);
             toast({
               variant: "destructive",
               title: "Delete failed",
@@ -508,7 +510,8 @@ export const InvoiceContextProvider = ({
           });
         }
       } else {
-        // Delete from localStorage
+        // Delete from localStorage (when not logged in or invoice has no ID)
+        console.log("Deleting from localStorage - user:", user, "invoiceId:", invoiceId);
         const updatedInvoices = [...savedInvoices];
         updatedInvoices.splice(index, 1);
         setSavedInvoices(updatedInvoices);
@@ -519,10 +522,22 @@ export const InvoiceContextProvider = ({
         // Dispatch custom event to notify other components (like ClientDetail) to refresh
         if (typeof window !== "undefined") {
           window.dispatchEvent(new CustomEvent("invoiceDeleted", {
-            detail: { invoiceId: (invoice as any).id || invoice.details?.invoiceNumber }
+            detail: { invoiceId: invoiceId || invoice.details?.invoiceNumber }
           }));
         }
+        
+        toast({
+          title: "Success",
+          description: "Invoice deleted successfully",
+        });
       }
+    } else {
+      console.error("Invalid index for delete:", index, "savedInvoices length:", savedInvoices.length);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Invalid invoice index",
+      });
     }
   };
 

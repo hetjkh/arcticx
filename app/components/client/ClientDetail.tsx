@@ -67,8 +67,12 @@ const ClientDetail = ({ clientId }: ClientDetailProps) => {
 
     const fetchClientDetails = useCallback(async () => {
         try {
-            const response = await fetch(`/api/client/${clientId}`, {
+            // Add timestamp to prevent caching
+            const response = await fetch(`/api/client/${clientId}?t=${Date.now()}`, {
                 cache: "no-store",
+                headers: {
+                    "Cache-Control": "no-cache",
+                },
             });
             if (response.ok) {
                 const data = await response.json();
@@ -105,7 +109,8 @@ const ClientDetail = ({ clientId }: ClientDetailProps) => {
         };
 
         // Listen for invoice deletion events to refresh client history
-        const handleInvoiceDeleted = () => {
+        const handleInvoiceDeleted = (event: Event) => {
+            // Force refresh client details immediately when invoice is deleted
             fetchClientDetails();
             router.refresh();
         };
