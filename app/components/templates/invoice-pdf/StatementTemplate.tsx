@@ -1,6 +1,6 @@
 import React from "react";
 import { InvoiceType } from "@/types";
-import { formatNumberWithCommas } from "@/lib/helpers";
+import { formatNumberWithCommas, isImageUrl, isDataUrl } from "@/lib/helpers";
 import { DATE_OPTIONS } from "@/lib/variables";
 
 type StatementData = {
@@ -19,6 +19,12 @@ const StatementTemplate = (data: StatementData) => {
     // Get currency from first invoice (assuming all invoices use same currency)
     const currency = invoices[0]?.details.currency || "USD";
 
+    // Get sender and details from first invoice (assuming all invoices have same sender)
+    const firstInvoice = invoices[0];
+    const sender = firstInvoice?.sender || { name: "", city: "", country: "", email: "", phone: "" };
+    const details = firstInvoice?.details || {};
+    const receiver = firstInvoice?.receiver || { name: "", city: "", country: "", email: "", phone: "" };
+
     // Sort invoices by date
     const sortedInvoices = [...invoices].sort((a, b) => {
         const dateA = new Date(a.details.invoiceDate).getTime();
@@ -26,12 +32,84 @@ const StatementTemplate = (data: StatementData) => {
         return dateA - dateB;
     });
 
+    // Get signature font if available
+    const fontHref = details.signature?.fontFamily
+        ? `https://fonts.googleapis.com/css2?family=${details.signature.fontFamily}&display=swap`
+        : "";
+
     return (
-        <div className="min-h-screen bg-white p-8">
-            <div className="max-w-5xl mx-auto">
-                {/* Header */}
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 uppercase">{title}</h1>
+        <>
+            {/* Load signature font if needed */}
+            {details.signature?.fontFamily && (
+                <>
+                    <link rel="preconnect" href="https://fonts.googleapis.com" />
+                    <link
+                        rel="preconnect"
+                        href="https://fonts.gstatic.com"
+                        crossOrigin="anonymous"
+                    />
+                    <link href={fontHref} rel="stylesheet" />
+                </>
+            )}
+            <div className="min-h-screen bg-white p-8" style={{ fontFamily: "Outfit, sans-serif" }}>
+                <div className="max-w-5xl mx-auto">
+                {/* Header with Logo and Company Details */}
+                <div className="flex flex-wrap justify-between items-start gap-6 mb-8 border-b border-gray-300 pb-6">
+                    <div className="flex-1 min-w-[300px] space-y-3">
+                        {details.invoiceLogo && (
+                            <img
+                                src={details.invoiceLogo}
+                                width={140}
+                                height={100}
+                                alt={`Logo of ${sender.name}`}
+                                className="mb-3"
+                            />
+                        )}
+                        <h1 className="text-2xl font-semibold uppercase tracking-wide text-gray-800">
+                            {sender.name || "Company Name"}
+                        </h1>
+                        <div className="text-sm text-gray-700 space-y-1">
+                            {(sender.city || sender.country) && (
+                                <p className="font-medium">
+                                    {[sender.city, sender.country].filter(Boolean).join(", ")}
+                                </p>
+                            )}
+                            {sender.email && (
+                                <p>
+                                    <span className="font-semibold">Email:</span> {sender.email}
+                                </p>
+                            )}
+                            {sender.phone && (
+                                <p>
+                                    <span className="font-semibold">Phone:</span> {sender.phone}
+                                </p>
+                            )}
+                            {sender.customInputs && sender.customInputs.length > 0 && (
+                                <div className="mt-2 space-y-1">
+                                    {sender.customInputs.map((input, idx) => (
+                                        <p key={idx}>
+                                            <span className="font-semibold">{input.key}:</span> {input.value}
+                                        </p>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="text-right space-y-3">
+                        <h2 className="text-3xl font-bold text-gray-900 uppercase tracking-wide">
+                            {title}
+                        </h2>
+                        <div className="text-sm text-gray-700 space-y-1">
+                            <p>
+                                <span className="font-semibold">Generated:</span>{" "}
+                                {new Date().toLocaleDateString("en-US", DATE_OPTIONS)}
+                            </p>
+                            <p>
+                                <span className="font-semibold">Total Invoices:</span> {invoices.length}
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Table */}
@@ -116,13 +194,46 @@ const StatementTemplate = (data: StatementData) => {
                     </table>
                 </div>
 
-                {/* Footer */}
-                <div className="mt-8 text-center text-sm text-gray-500">
-                    <p>Generated on {new Date().toLocaleDateString("en-US", DATE_OPTIONS)}</p>
-                    <p className="mt-1">Total Invoices: {invoices.length}</p>
+                {/* Footer with Signature */}
+                <div className="mt-8 border-t border-gray-300 pt-6">
+                    <div className="flex justify-end">
+                        {/* Signature */}
+                        {details.signature?.data && (
+                            <div className="text-right">
+                                <p className="text-sm font-semibold text-gray-700 uppercase tracking-widest mb-2">
+                                    Authorized Signature
+                                </p>
+                                {isImageUrl(details.signature.data) ? (
+                                    <img
+                                        src={details.signature.data}
+                                        width={140}
+                                        height={70}
+                                        alt={`Signature of ${sender.name}`}
+                                        className="border border-gray-300 rounded"
+                                    />
+                                ) : (
+                                    <div className="border border-gray-300 rounded p-2 bg-white min-w-[140px]">
+                                        <p
+                                            style={{
+                                                fontSize: 28,
+                                                fontWeight: 400,
+                                                fontFamily: `${details.signature.fontFamily || "Dancing Script"}, cursive`,
+                                                margin: 0,
+                                                textAlign: "center",
+                                            }}
+                                        >
+                                            {details.signature.data}
+                                        </p>
+                                    </div>
+                                )}
+                                <p className="text-sm text-gray-600 mt-2 font-medium">{sender.name}</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
+        </>
     );
 };
 

@@ -85,6 +85,21 @@ const SingleItem = ({
         control,
     });
 
+    const extraDeliverableVatPercentage = useWatch({
+        name: `${name}[${index}].extraDeliverableVatPercentage`,
+        control,
+    });
+
+    const extraDeliverableVat = useWatch({
+        name: `${name}[${index}].extraDeliverableVat`,
+        control,
+    });
+
+    const extraDeliverableShowVat = useWatch({
+        name: `${name}[${index}].extraDeliverableShowVat`,
+        control,
+    });
+
     // Currency
     const currency = useWatch({
         name: `details.currency`,
@@ -116,20 +131,42 @@ const SingleItem = ({
         }
     }, [vatPercentage, setValue, name, index]);
 
+    // Calculate extra deliverable VAT amount automatically from VAT percentage ONLY
+    // Example: if you enter 5 (%) then VAT amount becomes 50
+    useEffect(() => {
+        if (extraDeliverableVatPercentage != undefined && extraDeliverableVatPercentage !== "") {
+            const vatPercentValue = Number(extraDeliverableVatPercentage) || 0;
+
+            if (vatPercentValue >= 0) {
+                // Custom rule: VAT amount is 10x the VAT percentage (5% -> 50)
+                const calculatedVatAmount = (vatPercentValue * 10).toFixed(2);
+                setValue(`${name}[${index}].extraDeliverableVat`, calculatedVatAmount);
+            } else {
+                setValue(`${name}[${index}].extraDeliverableVat`, "0");
+            }
+        } else {
+            // If VAT percentage is cleared, reset VAT amount
+            setValue(`${name}[${index}].extraDeliverableVat`, "0");
+        }
+    }, [extraDeliverableVatPercentage, setValue, name, index]);
+
     useEffect(() => {
         // Calculate total when rate, VAT, or extra deliverable amount changes (quantity is always 1 for passengers)
-        // Total = rate + VAT amount + extra deliverable amount (if enabled)
+        // Total = rate + VAT amount + extra deliverable amount + extra deliverable VAT (if enabled)
         if (rate != undefined) {
             const rateValue = Number(rate) || 0;
             const vatValue = Number(vat) || 0;
             const extraAmount = (extraDeliverableEnabled && extraDeliverableAmount) 
                 ? Number(extraDeliverableAmount) || 0 
                 : 0;
-            const calculatedTotal = (rateValue + vatValue + extraAmount).toFixed(2);
+            const extraVatValue = (extraDeliverableEnabled && extraDeliverableVat) 
+                ? Number(extraDeliverableVat) || 0 
+                : 0;
+            const calculatedTotal = (rateValue + vatValue + extraAmount + extraVatValue).toFixed(2);
             setValue(`${name}[${index}].total`, calculatedTotal);
             setValue(`${name}[${index}].quantity`, 1);
         }
-    }, [rate, vat, extraDeliverableEnabled, extraDeliverableAmount, setValue, name, index]);
+    }, [rate, vat, extraDeliverableEnabled, extraDeliverableAmount, extraDeliverableVat, setValue, name, index]);
 
     // DnD
     const {
@@ -288,6 +325,19 @@ const SingleItem = ({
                     </div>
 
                     {extraDeliverableEnabled && (
+                        <>
+                        <div className="flex items-center gap-3">
+                            <Label htmlFor={`extraDeliverableShowVat-${index}`}>
+                                Show VAT in Template
+                            </Label>
+                            <Switch
+                                id={`extraDeliverableShowVat-${index}`}
+                                checked={extraDeliverableShowVat || false}
+                                onCheckedChange={(value) => {
+                                    setValue(`${name}[${index}].extraDeliverableShowVat`, value);
+                                }}
+                            />
+                        </div>
                         <div className="flex flex-wrap justify-between gap-y-5 gap-x-2">
                             <FormInput
                                 name={`${name}[${index}].extraDeliverable`}
@@ -314,7 +364,29 @@ const SingleItem = ({
                                 className="w-[8rem]"
                                 vertical
                             />
+
+                            <FormInput
+                                name={`${name}[${index}].extraDeliverableVatPercentage`}
+                                type="number"
+                                label="VAT %"
+                                labelHelper="(%)"
+                                placeholder="Enter VAT %"
+                                className="w-[8rem]"
+                                vertical
+                            />
+
+                            <FormInput
+                                name={`${name}[${index}].extraDeliverableVat`}
+                                type="number"
+                                label="VAT Amount"
+                                labelHelper={`(${currency})`}
+                                placeholder="Auto-calculated"
+                                className="w-[8rem]"
+                                vertical
+                                readOnly
+                            />
                         </div>
+                        </>
                     )}
                 </div>
             </div>

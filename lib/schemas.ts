@@ -118,6 +118,9 @@ const ItemSchema = z.object({
     extraDeliverable: fieldValidators.stringOptional,
     extraDeliverableServiceType: fieldValidators.stringOptional,
     extraDeliverableAmount: fieldValidators.stringToNumber.optional(),
+    extraDeliverableVatPercentage: fieldValidators.stringToNumber.optional(),
+    extraDeliverableVat: fieldValidators.stringToNumber.optional(),
+    extraDeliverableShowVat: z.boolean().optional(),
 });
 
 const PaymentInformationSchema = z.object({
