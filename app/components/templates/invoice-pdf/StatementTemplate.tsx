@@ -6,14 +6,38 @@ import { DATE_OPTIONS } from "@/lib/variables";
 type StatementData = {
     invoices: InvoiceType[];
     title?: string;
+    billedToName?: string;
 };
 
 const StatementTemplate = (data: StatementData) => {
-    const { invoices, title = "STATEMENT" } = data;
+    const { invoices, title = "STATEMENT", billedToName } = data;
 
-    // Calculate total amount
-    const totalAmount = invoices.reduce((sum, invoice) => {
-        return sum + (Number(invoice.details.totalAmount) || 0);
+    // Flatten invoices into passenger rows (one row per item/passenger)
+    type PassengerRow = {
+        invoice: InvoiceType;
+        item: InvoiceType["details"]["items"][0];
+        itemIndex: number;
+    };
+
+    const passengerRows: PassengerRow[] = [];
+    
+    // Sort invoices by date first
+    const sortedInvoices = [...invoices].sort((a, b) => {
+        const dateA = new Date(a.details.invoiceDate).getTime();
+        const dateB = new Date(b.details.invoiceDate).getTime();
+        return dateA - dateB;
+    });
+
+    // Create a row for each passenger (item) in each invoice
+    sortedInvoices.forEach((invoice) => {
+        invoice.details.items.forEach((item, itemIndex) => {
+            passengerRows.push({ invoice, item, itemIndex });
+        });
+    });
+
+    // Calculate total amount from all items
+    const totalAmount = passengerRows.reduce((sum, row) => {
+        return sum + (Number(row.item.total) || 0);
     }, 0);
 
     // Get currency from first invoice (assuming all invoices use same currency)
@@ -24,13 +48,6 @@ const StatementTemplate = (data: StatementData) => {
     const sender = firstInvoice?.sender || { name: "", city: "", country: "", email: "", phone: "" };
     const details = firstInvoice?.details || {};
     const receiver = firstInvoice?.receiver || { name: "", city: "", country: "", email: "", phone: "" };
-
-    // Sort invoices by date
-    const sortedInvoices = [...invoices].sort((a, b) => {
-        const dateA = new Date(a.details.invoiceDate).getTime();
-        const dateB = new Date(b.details.invoiceDate).getTime();
-        return dateA - dateB;
-    });
 
     // Get signature font if available
     const fontHref = details.signature?.fontFamily
@@ -112,6 +129,22 @@ const StatementTemplate = (data: StatementData) => {
                     </div>
                 </div>
 
+                {/* Billed To Section */}
+                <div className="mb-6 mt-4">
+                    <div className="text-left">
+                        <p className="text-sm font-semibold text-gray-700 uppercase tracking-widest mb-2 border-b border-gray-300 pb-1 inline-block">
+                            Billed To
+                        </p>
+                        <div className="mt-2 min-h-[80px] border border-gray-300 rounded p-3 bg-gray-50">
+                            {billedToName ? (
+                                <p className="text-base font-medium text-gray-900">{billedToName}</p>
+                            ) : (
+                                <p className="text-sm text-gray-400 italic">No name provided</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
                 {/* Table */}
                 <div className="border border-gray-300 rounded-lg overflow-hidden">
                     <table className="w-full border-collapse">
@@ -121,7 +154,7 @@ const StatementTemplate = (data: StatementData) => {
                                     DATE
                                 </th>
                                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 uppercase border-r border-gray-300">
-                                    TICKET NO
+                                    INVOICE NO
                                 </th>
                                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 uppercase border-r border-gray-300">
                                     NAME
@@ -135,29 +168,25 @@ const StatementTemplate = (data: StatementData) => {
                             </tr>
                         </thead>
                         <tbody>
-                            {sortedInvoices.map((invoice, index) => {
+                            {passengerRows.map((row, index) => {
+                                const invoice = row.invoice;
+                                const item = row.item;
+                                
                                 const invoiceDate = new Date(invoice.details.invoiceDate);
                                 const day = invoiceDate.getDate();
                                 const month = invoiceDate.toLocaleDateString("en-US", { month: "short" });
                                 const year = invoiceDate.getFullYear().toString().slice(-2);
                                 const formattedDate = `${day}-${month}-${year}`;
 
-                                // Get route from items description or service type
-                                const route = invoice.details.items
-                                    .map((item) => {
-                                        if (item.description) return item.description;
-                                        if (item.serviceType) return item.serviceType;
-                                        return item.name;
-                                    })
-                                    .filter(Boolean)
-                                    .join(", ") || "-";
+                                // Get route from this specific item's description, service type, or name
+                                const route = item.description || item.serviceType || item.name || "-";
 
-                                // Get name from receiver
-                                const name = invoice.receiver.name || "-";
+                                // Get passenger name from this specific item
+                                const passengerName = item.passengerName || "-";
 
                                 return (
                                     <tr
-                                        key={index}
+                                        key={`${invoice.details.invoiceNumber}-${row.itemIndex}`}
                                         className="border-b border-gray-200 hover:bg-gray-50"
                                     >
                                         <td className="px-4 py-3 text-sm text-gray-800 border-r border-gray-300">
@@ -167,13 +196,13 @@ const StatementTemplate = (data: StatementData) => {
                                             {invoice.details.invoiceNumber || "-"}
                                         </td>
                                         <td className="px-4 py-3 text-sm text-gray-800 border-r border-gray-300">
-                                            {name}
+                                            {passengerName}
                                         </td>
                                         <td className="px-4 py-3 text-sm text-gray-800 border-r border-gray-300">
                                             {route}
                                         </td>
                                         <td className="px-4 py-3 text-sm text-gray-800 text-right font-medium">
-                                            {formatNumberWithCommas(Number(invoice.details.totalAmount) || 0)}
+                                            {formatNumberWithCommas(Number(item.total) || 0)}
                                         </td>
                                     </tr>
                                 );
@@ -196,12 +225,55 @@ const StatementTemplate = (data: StatementData) => {
 
                 {/* Footer with Signature */}
                 <div className="mt-8 border-t border-gray-300 pt-6">
-                    <div className="flex justify-end">
-                        {/* Signature */}
+                    <div className="flex justify-between items-end">
+                        {/* Billing Signature */}
+                        <div className="text-left space-y-6">
+                            {/* Receiver Name */}
+                            <div>
+                                <p className="text-sm font-semibold text-gray-700 uppercase tracking-widest mb-2">
+                                    Receiver Name - 
+                                </p>
+                                <div className="min-w-[200px] min-h-[30px] border-b border-gray-300">
+                                    {/* Empty receiver name field - can be filled manually */}
+                                </div>
+                            </div>
+
+                            {/* Signature */}
+                            <div>
+                                <p className="text-sm font-semibold text-gray-700 uppercase tracking-widest mb-2">
+                                    Signature - 
+                                </p>
+                                <div className="min-w-[200px] min-h-[60px] border-b border-gray-300">
+                                    {/* Empty signature field - can be filled manually */}
+                                </div>
+                            </div>
+
+                            {/* Date */}
+                            <div>
+                                <p className="text-sm font-semibold text-gray-700 uppercase tracking-widest mb-2">
+                                    Date - 
+                                </p>
+                                <div className="min-w-[200px] min-h-[30px] border-b border-gray-300">
+                                    {/* Empty date field - can be filled manually */}
+                                </div>
+                            </div>
+
+                            {/* Receiver Stamp */}
+                            <div>
+                                <p className="text-sm font-semibold text-gray-700 uppercase tracking-widest mb-2">
+                                    Receiver Stamp
+                                </p>
+                                <div className="min-w-[200px] min-h-[60px] border border-gray-300 rounded">
+                                    {/* Empty receiver stamp field - can be filled manually */}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Authorized Signature */}
                         {details.signature?.data && (
                             <div className="text-right">
                                 <p className="text-sm font-semibold text-gray-700 uppercase tracking-widest mb-2">
-                                    Authorized Signature
+                                    Authorized Signature 
                                 </p>
                                 {isImageUrl(details.signature.data) ? (
                                     <img

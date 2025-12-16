@@ -15,6 +15,7 @@ import { InvoiceType } from "@/types";
 type StatementRequest = {
     invoices: InvoiceType[];
     title?: string;
+    billedToName?: string;
 };
 
 /**
@@ -27,7 +28,7 @@ type StatementRequest = {
  */
 export async function generateStatementService(req: NextRequest) {
     const body: StatementRequest = await req.json();
-    const { invoices, title } = body;
+    const { invoices, title, billedToName } = body;
     let browser;
     let page;
 
@@ -46,7 +47,7 @@ export async function generateStatementService(req: NextRequest) {
     try {
         const ReactDOMServer = (await import("react-dom/server")).default;
         const htmlTemplate = ReactDOMServer.renderToStaticMarkup(
-            StatementTemplate({ invoices, title })
+            StatementTemplate({ invoices, title, billedToName })
         );
 
         if (ENV === "production") {

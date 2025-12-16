@@ -62,6 +62,12 @@ export const ChargesContextProvider = ({ children }: ChargesContextProps) => {
         control,
     });
 
+    // Watch showVat toggle for template 3
+    const showVat = useWatch({
+        name: `details.showVat`,
+        control,
+    });
+
     // Charges
     const charges = {
         discount: useWatch({ name: `details.discountDetails`, control }) || {
@@ -165,6 +171,7 @@ export const ChargesContextProvider = ({ children }: ChargesContextProps) => {
         shippingType,
         shipping?.cost,
         currency,
+        showVat,
     ]);
 
     /**
@@ -174,8 +181,23 @@ export const ChargesContextProvider = ({ children }: ChargesContextProps) => {
         // Here Number(item.total) fixes a bug where an extra zero appears
         // at the beginning of subTotal caused by toFixed(2) in item.total in single item
         // Reason: toFixed(2) returns string, not a number instance
+        // If showVat is false, subtract VAT from item.total since item.total includes VAT
+        // Also check each item's extraDeliverableShowVat toggle for extra deliverable VAT
         const totalSum: number = itemsArray.reduce(
-            (sum: number, item: ItemType) => sum + Number(item.total),
+            (sum: number, item: ItemType) => {
+                let itemTotal = Number(item.total) || 0;
+                // If showVat is false, subtract regular VAT from the total
+                if (!showVat) {
+                    const vatAmount = Number(item.vat) || 0;
+                    itemTotal = itemTotal - vatAmount;
+                }
+                // If extraDeliverableShowVat is false for this item, subtract extra deliverable VAT
+                if (item.extraDeliverableEnabled && !item.extraDeliverableShowVat) {
+                    const extraVatAmount = Number(item.extraDeliverableVat) || 0;
+                    itemTotal = itemTotal - extraVatAmount;
+                }
+                return sum + itemTotal;
+            },
             0
         );
 

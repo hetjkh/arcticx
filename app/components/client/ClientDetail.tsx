@@ -26,7 +26,7 @@ import {
 import { BaseButton } from "@/app/components";
 
 // Icons
-import { Mail, Phone, MapPin, FileText, Edit, ArrowLeft, Plus } from "lucide-react";
+import { Mail, Phone, MapPin, FileText, Edit, ArrowLeft, Plus, X } from "lucide-react";
 
 interface Client {
     id: string;
@@ -55,6 +55,14 @@ interface Invoice {
     };
 }
 
+interface Statement {
+    id: string;
+    title?: string;
+    invoices: Invoice[];
+    createdAt: string;
+    updatedAt: string;
+}
+
 interface ClientDetailProps {
     clientId: string;
 }
@@ -63,6 +71,7 @@ const ClientDetail = ({ clientId }: ClientDetailProps) => {
     const router = useRouter();
     const [client, setClient] = useState<Client | null>(null);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [statements, setStatements] = useState<Statement[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchClientDetails = useCallback(async () => {
@@ -78,6 +87,7 @@ const ClientDetail = ({ clientId }: ClientDetailProps) => {
                 const data = await response.json();
                 setClient(data.client);
                 setInvoices(data.invoices || []);
+                setStatements(data.statements || []);
             } else {
                 alert("Failed to load client details");
                 router.push("/clients");
@@ -115,20 +125,53 @@ const ClientDetail = ({ clientId }: ClientDetailProps) => {
             router.refresh();
         };
 
+        // Listen for statement deletion events to refresh client history
+        const handleStatementDeleted = (event: Event) => {
+            // Force refresh client details immediately when statement is deleted
+            fetchClientDetails();
+            router.refresh();
+        };
+
         document.addEventListener("visibilitychange", handleVisibilityChange);
         window.addEventListener("focus", handleFocus);
         window.addEventListener("invoiceDeleted", handleInvoiceDeleted);
+        window.addEventListener("statementDeleted", handleStatementDeleted);
 
         return () => {
             document.removeEventListener("visibilitychange", handleVisibilityChange);
             window.removeEventListener("focus", handleFocus);
             window.removeEventListener("invoiceDeleted", handleInvoiceDeleted);
+            window.removeEventListener("statementDeleted", handleStatementDeleted);
         };
     }, [fetchClientDetails, router]);
 
     const handleCreateInvoice = () => {
         if (client) {
             router.push(`/?clientId=${client.id}`);
+        }
+    };
+
+    const handleDeleteStatement = async (statementId: string) => {
+        if (!confirm("Are you sure you want to delete this statement?")) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/statement/${statementId}`, {
+                method: "DELETE",
+            });
+
+            if (response.ok) {
+                // Refresh client details
+                fetchClientDetails();
+                // Dispatch event for other components
+                window.dispatchEvent(new Event("statementDeleted"));
+            } else {
+                alert("Failed to delete statement");
+            }
+        } catch (error) {
+            console.error("Error deleting statement:", error);
+            alert("Error deleting statement");
         }
     };
 
@@ -301,6 +344,77 @@ const ClientDetail = ({ clientId }: ClientDetailProps) => {
                                         </TableCell>
                                     </TableRow>
                                 ))}
+                            </TableBody>
+                        </Table>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Statement History</CardTitle>
+                    <CardDescription>
+                        {statements.length} {statements.length === 1 ? "statement" : "statements"} for this
+                        client
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {statements.length === 0 ? (
+                        <p className="text-center text-gray-500 py-8">
+                            No statements found for this client.
+                        </p>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Title</TableHead>
+                                    <TableHead>Invoices</TableHead>
+                                    <TableHead>Created</TableHead>
+                                    <TableHead>Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {statements.map((statement) => {
+                                    const totalAmount = statement.invoices.reduce(
+                                        (sum, inv) => sum + (Number(inv.details?.totalAmount) || 0),
+                                        0
+                                    );
+                                    const currency = statement.invoices[0]?.details?.currency || "USD";
+                                    
+                                    return (
+                                        <TableRow key={statement.id}>
+                                            <TableCell className="font-medium">
+                                                {statement.title || "STATEMENT"}
+                                            </TableCell>
+                                            <TableCell>
+                                                {statement.invoices.length} invoice{statement.invoices.length !== 1 ? 's' : ''} - {formatCurrency(totalAmount, currency)}
+                                            </TableCell>
+                                            <TableCell>{statement.createdAt}</TableCell>
+                                            <TableCell>
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            // Download statement PDF
+                                                            window.open(`/api/statement/${statement.id}/download`, '_blank');
+                                                        }}
+                                                    >
+                                                        <FileText className="w-4 h-4 mr-2" />
+                                                        Download
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleDeleteStatement(statement.id)}
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
                             </TableBody>
                         </Table>
                     )}

@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db";
 import { Client, ClientInput } from "@/models/Client";
 import { ClientSchema } from "@/lib/schemas";
 import { InvoiceDocument } from "@/models/Invoice";
+import { StatementDocument } from "@/models/Statement";
 import { ObjectId } from "mongodb";
 
 export async function GET(
@@ -46,12 +47,30 @@ export async function GET(
             .sort({ createdAt: -1 })
             .toArray();
 
+        // Get all statements for this client
+        const statementsCollection = db.collection<StatementDocument>("statements");
+        const statements = await statementsCollection
+            .find({
+                userId: new ObjectId(user.userId),
+                clientEmail: client.email.toLowerCase(),
+            })
+            .sort({ createdAt: -1 })
+            .toArray();
+
         const { _id, userId, ...clientData } = client;
         const formattedInvoices = invoices.map((invoice) => {
             const { _id: invoiceId, userId: invoiceUserId, ...invoiceData } = invoice;
             return {
                 ...invoiceData,
                 id: invoiceId!.toString(),
+            };
+        });
+
+        const formattedStatements = statements.map((statement) => {
+            const { _id: statementId, userId: statementUserId, ...statementData } = statement;
+            return {
+                ...statementData,
+                id: statementId!.toString(),
             };
         });
 
@@ -62,6 +81,7 @@ export async function GET(
                     id: _id!.toString(),
                 },
                 invoices: formattedInvoices,
+                statements: formattedStatements,
             },
             { status: 200 }
         );
