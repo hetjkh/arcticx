@@ -4,7 +4,7 @@ import React from "react";
 import { InvoiceLayout } from "@/app/components";
 
 // Helpers
-import { formatNumberWithCommas, isDataUrl, isImageUrl } from "@/lib/helpers";
+import { formatNumberWithCommas, formatNumberWithCommasNoDecimals, isDataUrl, isImageUrl } from "@/lib/helpers";
 
 // Variables
 import { DATE_OPTIONS } from "@/lib/variables";
@@ -14,6 +14,27 @@ import { InvoiceType } from "@/types";
 
 const InvoiceTemplate2 = (data: InvoiceType) => {
     const { sender, receiver, details } = data;
+    
+    // Column visibility flags (default to true if not set)
+    const showPassengerName = details.showPassengerName !== false;
+    const showRoute = details.showRoute !== false;
+    const showAirlines = details.showAirlines !== false;
+    const showServiceType = details.showServiceType !== false;
+    const showAmount = details.showAmount !== false;
+    
+    // Column names (use custom names if available, otherwise defaults)
+    const defaultColumnNames = {
+        passengerName: "Passenger Name",
+        route: "Route",
+        airlines: "Airlines",
+        serviceType: "Type of Service",
+        amount: "Amount",
+    };
+    const columnNames = {
+        ...defaultColumnNames,
+        ...(details.columnNames || {}),
+    };
+    
     return (
         <InvoiceLayout data={data}>
             <div className="flex justify-between">
@@ -89,42 +110,58 @@ const InvoiceTemplate2 = (data: InvoiceType) => {
             <div className="mt-3">
                 <div className="border border-gray-200 p-1 rounded-lg space-y-1">
                     <div className="hidden sm:grid sm:grid-cols-6">
-                        <div className="sm:col-span-2 text-xs font-medium text-gray-500 uppercase">
-                            Item
-                        </div>
-                        <div className="text-left text-xs font-medium text-gray-500 uppercase">
-                            Service Type
-                        </div>
+                        {(showPassengerName || showAirlines || showRoute) && (
+                            <div className="sm:col-span-2 text-xs font-medium text-gray-500 uppercase">
+                                Item
+                            </div>
+                        )}
+                        {showServiceType && (
+                            <div className="text-left text-xs font-medium text-gray-500 uppercase">
+                                {columnNames.serviceType}
+                            </div>
+                        )}
                         <div className="text-left text-xs font-medium text-gray-500 uppercase">
                             Qty
                         </div>
                         <div className="text-left text-xs font-medium text-gray-500 uppercase">
                             Rate
                         </div>
-                        <div className="text-right text-xs font-medium text-gray-500 uppercase">
-                            Amount
-                        </div>
+                        {showAmount && (
+                            <div className="text-right text-xs font-medium text-gray-500 uppercase">
+                                {columnNames.amount}
+                            </div>
+                        )}
                     </div>
                     <div className="hidden sm:block border-b border-gray-200"></div>
                     <div className="grid grid-cols-3 sm:grid-cols-6 gap-y-1">
                         {details.items.map((item, index) => (
                             <React.Fragment key={index}>
-                                <div className="col-span-full sm:col-span-2 border-b border-gray-300">
-                                    <p className="font-semibold text-gray-900">
-                                        {item.passengerName || `Passenger ${index + 1}`}
-                                    </p>
-                                    <p className="font-medium text-gray-800 mt-1">
-                                        {item.name || 'Airlines'}
-                                    </p>
-                                    <p className="text-xs text-gray-600 whitespace-pre-line mt-1">
-                                        {item.description}
-                                    </p>
-                                </div>
-                                <div className="border-b border-gray-300">
-                                    <p className="text-gray-800 text-sm">
-                                        {item.serviceType || "-"}
-                                    </p>
-                                </div>
+                                {(showPassengerName || showAirlines || showRoute) && (
+                                    <div className="col-span-full sm:col-span-2 border-b border-gray-300">
+                                        {showPassengerName && (
+                                            <p className="font-semibold text-gray-900">
+                                                {item.passengerName || `Passenger ${index + 1}`}
+                                            </p>
+                                        )}
+                                        {showAirlines && (
+                                            <p className="font-medium text-gray-800 mt-1">
+                                                {item.name || 'Airlines'}
+                                            </p>
+                                        )}
+                                        {showRoute && (
+                                            <p className="text-xs text-gray-600 whitespace-pre-line mt-1">
+                                                {item.description}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+                                {showServiceType && (
+                                    <div className="border-b border-gray-300">
+                                        <p className="text-gray-800 text-sm">
+                                            {item.serviceType || "-"}
+                                        </p>
+                                    </div>
+                                )}
                                 <div className="border-b border-gray-300">
                                     <p className="text-gray-800">
                                         {item.quantity || 1}
@@ -135,11 +172,13 @@ const InvoiceTemplate2 = (data: InvoiceType) => {
                                         {item.unitPrice} {details.currency}
                                     </p>
                                 </div>
-                                <div className="border-b border-gray-300">
-                                    <p className="sm:text-right text-gray-800">
-                                        {item.total} {details.currency}
-                                    </p>
-                                </div>
+                                {showAmount && (
+                                    <div className="border-b border-gray-300">
+                                        <p className="sm:text-right text-gray-800">
+                                            {formatNumberWithCommasNoDecimals(Number(item.total) || 0)} {details.currency}
+                                        </p>
+                                    </div>
+                                )}
                             </React.Fragment>
                         ))}
                     </div>

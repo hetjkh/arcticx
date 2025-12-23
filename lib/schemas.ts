@@ -175,6 +175,18 @@ const InvoiceDetailsSchema = z.object({
     updatedAt: fieldValidators.stringOptional,
     pdfTemplate: z.number(),
     showVat: z.boolean().optional(),
+    showPassengerName: z.boolean().optional(),
+    showRoute: z.boolean().optional(),
+    showAirlines: z.boolean().optional(),
+    showServiceType: z.boolean().optional(),
+    showAmount: z.boolean().optional(),
+    columnNames: z.object({
+        passengerName: z.string().optional(),
+        route: z.string().optional(),
+        airlines: z.string().optional(),
+        serviceType: z.string().optional(),
+        amount: z.string().optional(),
+    }).optional(),
 });
 
 const InvoiceSchema = z.object({

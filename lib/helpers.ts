@@ -26,6 +26,20 @@ const formatNumberWithCommas = (number: number) => {
 };
 
 /**
+ * Formats a number with commas but without decimal places
+ *
+ * @param {number} number - Number to format
+ * @returns {string} A styled number without decimals to be displayed on the invoice
+ */
+const formatNumberWithCommasNoDecimals = (number: number) => {
+    return Math.round(number).toLocaleString("en-US", {
+        style: "decimal",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    });
+};
+
+/**
  * @param {string} currency - The currency that is currently selected 
  * @returns {Object} - An object containing the currency details as
  * ```
@@ -281,6 +295,7 @@ const fileToBuffer = async (file: File) => {
 
 export {
     formatNumberWithCommas,
+    formatNumberWithCommasNoDecimals,
     formatPriceToString,
     flattenObject,
     isValidEmail,

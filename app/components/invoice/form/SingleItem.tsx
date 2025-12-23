@@ -19,6 +19,7 @@ import { BaseButton, FormInput, FormTextarea } from "@/app/components";
 
 // Contexts
 import { useTranslationContext } from "@/contexts/TranslationContext";
+import { useColumnNames } from "@/contexts/ColumnNamesContext";
 
 // Icons
 import { ChevronDown, ChevronUp, GripVertical, Trash2 } from "lucide-react";
@@ -48,6 +49,7 @@ const SingleItem = ({
     const { control, setValue } = useFormContext();
 
     const { _t } = useTranslationContext();
+    const { columnNames } = useColumnNames();
 
     // Items
     const rate = useWatch({
@@ -112,43 +114,45 @@ const SingleItem = ({
         control,
     });
 
-    // Calculate VAT amount automatically from VAT percentage ONLY
-    // Example: if you enter 5 (%) then VAT amount becomes 50
+    // Calculate VAT amount from rate and VAT percentage
+    // VAT Amount = Rate × (VAT Percentage / 100)
     useEffect(() => {
-        if (vatPercentage != undefined && vatPercentage !== "") {
+        if (vatPercentage != undefined && vatPercentage !== "" && rate != undefined) {
             const vatPercentValue = Number(vatPercentage) || 0;
+            const rateValue = Number(rate) || 0;
 
-            if (vatPercentValue >= 0) {
-                // Custom rule: VAT amount is 10x the VAT percentage (5% -> 50)
-                const calculatedVatAmount = (vatPercentValue * 10).toFixed(2);
+            if (vatPercentValue >= 0 && rateValue > 0) {
+                // Calculate VAT: Rate × (VAT Percentage / 100)
+                const calculatedVatAmount = (rateValue * (vatPercentValue / 100)).toFixed(2);
                 setValue(`${name}[${index}].vat`, calculatedVatAmount);
             } else {
                 setValue(`${name}[${index}].vat`, "0");
             }
         } else {
-            // If VAT percentage is cleared, reset VAT amount
+            // If VAT percentage or rate is cleared, reset VAT amount
             setValue(`${name}[${index}].vat`, "0");
         }
-    }, [vatPercentage, setValue, name, index]);
+    }, [vatPercentage, rate, setValue, name, index]);
 
-    // Calculate extra deliverable VAT amount automatically from VAT percentage ONLY
-    // Example: if you enter 5 (%) then VAT amount becomes 50
+    // Calculate extra deliverable VAT amount from extra deliverable amount and VAT percentage
+    // Extra Deliverable VAT = Extra Deliverable Amount × (VAT Percentage / 100)
     useEffect(() => {
-        if (extraDeliverableVatPercentage != undefined && extraDeliverableVatPercentage !== "") {
+        if (extraDeliverableVatPercentage != undefined && extraDeliverableVatPercentage !== "" && extraDeliverableAmount != undefined) {
             const vatPercentValue = Number(extraDeliverableVatPercentage) || 0;
+            const extraAmountValue = Number(extraDeliverableAmount) || 0;
 
-            if (vatPercentValue >= 0) {
-                // Custom rule: VAT amount is 10x the VAT percentage (5% -> 50)
-                const calculatedVatAmount = (vatPercentValue * 10).toFixed(2);
+            if (vatPercentValue >= 0 && extraAmountValue > 0) {
+                // Calculate VAT: Extra Deliverable Amount × (VAT Percentage / 100)
+                const calculatedVatAmount = (extraAmountValue * (vatPercentValue / 100)).toFixed(2);
                 setValue(`${name}[${index}].extraDeliverableVat`, calculatedVatAmount);
             } else {
                 setValue(`${name}[${index}].extraDeliverableVat`, "0");
             }
         } else {
-            // If VAT percentage is cleared, reset VAT amount
+            // If VAT percentage or extra deliverable amount is cleared, reset VAT amount
             setValue(`${name}[${index}].extraDeliverableVat`, "0");
         }
-    }, [extraDeliverableVatPercentage, setValue, name, index]);
+    }, [extraDeliverableVatPercentage, extraDeliverableAmount, setValue, name, index]);
 
     useEffect(() => {
         // Calculate total when rate, VAT, or extra deliverable amount changes (quantity is always 1 for passengers)
@@ -238,21 +242,21 @@ const SingleItem = ({
                 <div className="flex flex-wrap justify-between gap-y-5 gap-x-2">
                     <FormInput
                         name={`${name}[${index}].passengerName`}
-                        label={`Passenger Name (Person ${index + 1})`}
+                        label={`${columnNames.passengerName} (Person ${index + 1})`}
                         placeholder={`Enter passenger ${index + 1} name`}
                         vertical
                     />
 
                     <FormInput
                         name={`${name}[${index}].name`}
-                        label="Airlines"
+                        label={columnNames.airlines}
                         placeholder="Enter airline name"
                         vertical
                     />
 
                     <FormInput
                         name={`${name}[${index}].serviceType`}
-                        label="Type of Service"
+                        label={columnNames.serviceType}
                         placeholder="Enter type of service"
                         className="w-[12rem]"
                         vertical
@@ -305,7 +309,7 @@ const SingleItem = ({
                 
                 <FormTextarea
                     name={`${name}[${index}].description`}
-                    label="Description"
+                    label={columnNames.route}
                     placeholder="Enter description"
                 />
 
@@ -349,7 +353,7 @@ const SingleItem = ({
 
                             <FormInput
                                 name={`${name}[${index}].extraDeliverableServiceType`}
-                                label="Type of Service"
+                                label={columnNames.serviceType}
                                 placeholder="Enter service type"
                                 className="w-[8rem]"
                                 vertical

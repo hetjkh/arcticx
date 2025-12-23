@@ -178,6 +178,12 @@ export const FORM_DEFAULT_VALUES = {
     paymentTerms: "",
     totalAmountInWords: "",
     pdfTemplate: 3,
+    showVat: false,
+    showPassengerName: true,
+    showRoute: true,
+    showAirlines: true,
+    showServiceType: true,
+    showAmount: true,
     signature: {
       data: "",
     },

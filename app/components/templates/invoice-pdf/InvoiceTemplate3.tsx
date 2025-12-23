@@ -4,7 +4,7 @@ import React from "react";
 import { InvoiceLayout } from "@/app/components";
 
 // Helpers
-import { formatNumberWithCommas, isDataUrl, isImageUrl } from "@/lib/helpers";
+import { formatNumberWithCommas, formatNumberWithCommasNoDecimals, isDataUrl, isImageUrl } from "@/lib/helpers";
 import { DATE_OPTIONS } from "@/lib/variables";
 
 // Types
@@ -15,6 +15,35 @@ const InvoiceTemplate = (data: InvoiceType) => {
 
   const itinerary = details.items || [];
   const showVat = details.showVat || false;
+  
+  // Column visibility flags (default to true if not set)
+  const showPassengerName = details.showPassengerName !== false;
+  const showRoute = details.showRoute !== false;
+  const showAirlines = details.showAirlines !== false;
+  const showServiceType = details.showServiceType !== false;
+  const showAmount = details.showAmount !== false;
+  
+  // Column names (use custom names if available, otherwise defaults)
+  const defaultColumnNames = {
+    passengerName: "Passenger Name",
+    route: "Route",
+    airlines: "Airlines",
+    serviceType: "Type of Service",
+    amount: "Amount",
+  };
+  const columnNames = {
+    ...defaultColumnNames,
+    ...(details.columnNames || {}),
+  };
+  
+  // Calculate visible column count for colspan
+  const visibleColumnsCount = [
+    showPassengerName,
+    showRoute,
+    showAirlines,
+    showServiceType,
+    showAmount,
+  ].filter(Boolean).length;
 
   const renderMultiline = (value?: string) => {
     if (!value) return null;
@@ -104,28 +133,38 @@ const InvoiceTemplate = (data: InvoiceType) => {
           <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
             <thead className="bg-gray-100 text-gray-800 uppercase text-xs tracking-widest">
               <tr>
-                <th className="border border-gray-400 px-4 py-3 text-left" style={{ width: '18%' }}>
-                  Passenger Name
-                </th>
-                <th className="border border-gray-400 px-4 py-3 text-left" style={{ width: '32%' }}>
-                  Route
-                </th>
-                <th className="border border-gray-400 px-4 py-3 text-left" style={{ width: '15%' }}>
-                  Airlines
-                </th>
-                <th className="border border-gray-400 px-4 py-3 text-left" style={{ width: '15%' }}>
-                  Type of Service
-                </th>
-                <th className="border border-gray-400 px-4 py-3 text-right" style={{ width: '20%' }}>
-                  Amount
-                </th>
+                {showPassengerName && (
+                  <th className="border border-gray-400 px-4 py-3 text-left" style={{ width: '18%' }}>
+                    {columnNames.passengerName}
+                  </th>
+                )}
+                {showRoute && (
+                  <th className="border border-gray-400 px-4 py-3 text-left" style={{ width: '32%' }}>
+                    {columnNames.route}
+                  </th>
+                )}
+                {showAirlines && (
+                  <th className="border border-gray-400 px-4 py-3 text-left" style={{ width: '15%' }}>
+                    {columnNames.airlines}
+                  </th>
+                )}
+                {showServiceType && (
+                  <th className="border border-gray-400 px-4 py-3 text-left" style={{ width: '15%' }}>
+                    {columnNames.serviceType}
+                  </th>
+                )}
+                {showAmount && (
+                  <th className="border border-gray-400 px-4 py-3 text-right" style={{ width: '20%' }}>
+                    {columnNames.amount}
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="text-sm text-gray-700">
               {itinerary.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={visibleColumnsCount}
                     className="border border-gray-400 px-4 py-6 text-center italic text-gray-500"
                   >
                     No travel segments provided.
@@ -135,76 +174,96 @@ const InvoiceTemplate = (data: InvoiceType) => {
                 itinerary.map((item, index) => (
                   <React.Fragment key={index}>
                     <tr className="align-top">
-                      <td className="border border-gray-400 px-4 py-4 font-semibold text-gray-900" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
-                        {item.passengerName || `Passenger ${index + 1}`}
-                      </td>
-                      <td className="border border-gray-400 px-4 py-4 space-y-1 break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
-                        {renderMultiline(item.description)}
-                        {!item.description && (
-                          <p className="italic text-gray-400">
-                            Add travel details in the item description field.
-                          </p>
-                        )}
-                      </td>
-                      <td className="border border-gray-400 px-4 py-4 space-y-1 break-words">
-                        {renderMultiline(item.name)}
-                        {!item.name && (
-                          <p className="italic text-gray-400">
-                            Specify airline names in the item title.
-                          </p>
-                        )}
-                      </td>
-                      <td className="border border-gray-400 px-4 py-4 text-gray-700 break-words">
-                        {item.serviceType || "-"}
-                      </td>
-                      <td className="border border-gray-400 px-4 py-4 text-right font-medium" style={{ minWidth: '120px' }}>
-                        {formatNumberWithCommas(Number(item.unitPrice) || 0)}{" "}
-                        {details.currency}
-                      </td>
+                      {showPassengerName && (
+                        <td className="border border-gray-400 px-4 py-4 font-semibold text-gray-900" style={{ wordBreak: 'normal', overflowWrap: 'normal' }}>
+                          {item.passengerName || `Passenger ${index + 1}`}
+                        </td>
+                      )}
+                      {showRoute && (
+                        <td className="border border-gray-400 px-4 py-4 space-y-1 break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                          {renderMultiline(item.description)}
+                          {!item.description && (
+                            <p className="italic text-gray-400">
+                              Add travel details in the item description field.
+                            </p>
+                          )}
+                        </td>
+                      )}
+                      {showAirlines && (
+                        <td className="border border-gray-400 px-4 py-4 space-y-1 break-words">
+                          {renderMultiline(item.name)}
+                          {!item.name && (
+                            <p className="italic text-gray-400">
+                              Specify airline names in the item title.
+                            </p>
+                          )}
+                        </td>
+                      )}
+                      {showServiceType && (
+                        <td className="border border-gray-400 px-4 py-4 text-gray-700 break-words">
+                          {item.serviceType || "-"}
+                        </td>
+                      )}
+                      {showAmount && (
+                        <td className="border border-gray-400 px-4 py-4 text-right font-medium" style={{ minWidth: '120px' }}>
+                          {formatNumberWithCommasNoDecimals(Number(item.unitPrice) || 0)}{" "}
+                          {details.currency}
+                        </td>
+                      )}
                     </tr>
                     {item.extraDeliverableEnabled && (
                       <>
                         <tr className="align-top">
-                          <td className="border border-gray-400 px-4 py-4"></td>
-                          <td className="border border-gray-400 px-4 py-4 text-gray-700 break-words">
-                            {item.extraDeliverable || ""}
-                          </td>
-                          <td className="border border-gray-400 px-4 py-4"></td>
-                          <td className="border border-gray-400 px-4 py-4 text-gray-700 break-words">
-                            {item.extraDeliverableServiceType || "-"}
-                          </td>
-                          <td className="border border-gray-400 px-4 py-4 text-right font-medium">
-                            {item.extraDeliverableAmount 
-                              ? `${formatNumberWithCommas(Number(item.extraDeliverableAmount) || 0)} ${details.currency}`
-                              : ""}
-                          </td>
+                          {showPassengerName && <td className="border border-gray-400 px-4 py-4"></td>}
+                          {showRoute && (
+                            <td className="border border-gray-400 px-4 py-4 text-gray-700 break-words">
+                              {item.extraDeliverable || ""}
+                            </td>
+                          )}
+                          {showAirlines && <td className="border border-gray-400 px-4 py-4"></td>}
+                          {showServiceType && (
+                            <td className="border border-gray-400 px-4 py-4 text-gray-700 break-words">
+                              {item.extraDeliverableServiceType || "-"}
+                            </td>
+                          )}
+                          {showAmount && (
+                            <td className="border border-gray-400 px-4 py-4 text-right font-medium">
+                              {item.extraDeliverableAmount 
+                                ? `${formatNumberWithCommas(Number(item.extraDeliverableAmount) || 0)} ${details.currency}`
+                                : ""}
+                            </td>
+                          )}
                         </tr>
                         {item.extraDeliverableShowVat && item.extraDeliverableVat !== undefined && Number(item.extraDeliverableVat) > 0 && (
                           <tr className="align-top">
-                            <td className="border border-gray-400 px-4 py-2 text-gray-700" colSpan={4}>
+                            <td className="border border-gray-400 px-4 py-2 text-gray-700" colSpan={visibleColumnsCount - 1}>
                               <span className="font-medium">
                                 Extra Deliverable VAT{item.extraDeliverableVatPercentage ? ` = ${item.extraDeliverableVatPercentage}%` : ''}
                               </span>
                             </td>
-                            <td className="border border-gray-400 px-4 py-2 text-right font-medium">
-                              {formatNumberWithCommas(Number(item.extraDeliverableVat) || 0)}{" "}
-                              {details.currency}
-                            </td>
+                            {showAmount && (
+                              <td className="border border-gray-400 px-4 py-2 text-right font-medium">
+                                {formatNumberWithCommas(Number(item.extraDeliverableVat) || 0)}{" "}
+                                {details.currency}
+                              </td>
+                            )}
                           </tr>
                         )}
                       </>
                     )}
                     {showVat && item.vat !== undefined && Number(item.vat) > 0 && (
                       <tr className="align-top">
-                        <td className="border border-gray-400 px-4 py-2 text-gray-700" colSpan={4}>
+                        <td className="border border-gray-400 px-4 py-2 text-gray-700" colSpan={visibleColumnsCount - 1}>
                           <span className="font-medium">
                             VAT{item.vatPercentage ? ` = ${item.vatPercentage}%` : ''}
                           </span>
                         </td>
-                        <td className="border border-gray-400 px-4 py-2 text-right font-medium">
-                          {formatNumberWithCommas(Number(item.vat) || 0)}{" "}
-                          {details.currency}
-                        </td>
+                        {showAmount && (
+                          <td className="border border-gray-400 px-4 py-2 text-right font-medium">
+                            {formatNumberWithCommas(Number(item.vat) || 0)}{" "}
+                            {details.currency}
+                          </td>
+                        )}
                       </tr>
                     )}
                   </React.Fragment>
