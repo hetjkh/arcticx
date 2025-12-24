@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 // RHF
-import { FieldArrayWithId, useFormContext, useWatch } from "react-hook-form";
+import { FieldArrayWithId, useFormContext, useWatch, useFieldArray } from "react-hook-form";
 
 // DnD
 import { useSortable } from "@dnd-kit/sortable";
@@ -22,7 +22,7 @@ import { useTranslationContext } from "@/contexts/TranslationContext";
 import { useColumnNames } from "@/contexts/ColumnNamesContext";
 
 // Icons
-import { ChevronDown, ChevronUp, GripVertical, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, GripVertical, Trash2, Plus } from "lucide-react";
 
 // Types
 import { ItemType, NameType } from "@/types";
@@ -49,7 +49,7 @@ const SingleItem = ({
     const { control, setValue } = useFormContext();
 
     const { _t } = useTranslationContext();
-    const { columnNames } = useColumnNames();
+    const { columnNames, extraDeliverableColumnNames, showExtraDeliverableColumns } = useColumnNames();
 
     // Items
     const rate = useWatch({
@@ -77,30 +77,19 @@ const SingleItem = ({
         control,
     });
 
-    const extraDeliverableEnabled = useWatch({
-        name: `${name}[${index}].extraDeliverableEnabled`,
+    // Extra Deliverables - using field array
+    const extraDeliverablesFieldArray = useFieldArray({
         control,
+        name: `${name}[${index}].extraDeliverables`,
     });
 
-    const extraDeliverableAmount = useWatch({
-        name: `${name}[${index}].extraDeliverableAmount`,
-        control,
-    });
+    const { fields: extraDeliverableFields, append: appendExtraDeliverable, remove: removeExtraDeliverable } = extraDeliverablesFieldArray;
 
-    const extraDeliverableVatPercentage = useWatch({
-        name: `${name}[${index}].extraDeliverableVatPercentage`,
+    // Watch all extra deliverables for total calculation
+    const extraDeliverables = useWatch({
+        name: `${name}[${index}].extraDeliverables`,
         control,
-    });
-
-    const extraDeliverableVat = useWatch({
-        name: `${name}[${index}].extraDeliverableVat`,
-        control,
-    });
-
-    const extraDeliverableShowVat = useWatch({
-        name: `${name}[${index}].extraDeliverableShowVat`,
-        control,
-    });
+    }) || [];
 
     // Currency
     const currency = useWatch({
@@ -134,43 +123,87 @@ const SingleItem = ({
         }
     }, [vatPercentage, rate, setValue, name, index]);
 
-    // Calculate extra deliverable VAT amount from extra deliverable amount and VAT percentage
-    // Extra Deliverable VAT = Extra Deliverable Amount × (VAT Percentage / 100)
+    // Calculate VAT for each extra deliverable
+    // Use a ref to track previous values and prevent infinite loops
+    const prevExtraDeliverablesRef = useRef<string>("");
+    
     useEffect(() => {
-        if (extraDeliverableVatPercentage != undefined && extraDeliverableVatPercentage !== "" && extraDeliverableAmount != undefined) {
-            const vatPercentValue = Number(extraDeliverableVatPercentage) || 0;
-            const extraAmountValue = Number(extraDeliverableAmount) || 0;
+        if (!extraDeliverables || !Array.isArray(extraDeliverables)) return;
+        
+        // Create a stable key from vatPercentage and amount (excluding vat to prevent loops)
+        const currentKey = extraDeliverables.map(e => `${e?.vatPercentage || ''}_${e?.amount || ''}`).join('|');
+        
+        // Only recalculate if the inputs (vatPercentage or amount) changed
+        if (currentKey === prevExtraDeliverablesRef.current) return;
+        prevExtraDeliverablesRef.current = currentKey;
+        
+        extraDeliverables.forEach((extra, extraIndex) => {
+            const extraVatPercentage = extra?.vatPercentage;
+            const extraAmount = extra?.amount;
+            const currentVat = extra?.vat || "0";
 
-            if (vatPercentValue >= 0 && extraAmountValue > 0) {
-                // Calculate VAT: Extra Deliverable Amount × (VAT Percentage / 100)
-                const calculatedVatAmount = (extraAmountValue * (vatPercentValue / 100)).toFixed(2);
-                setValue(`${name}[${index}].extraDeliverableVat`, calculatedVatAmount);
+            // Check if we have valid inputs for VAT calculation
+            const hasVatInputs = extraVatPercentage !== undefined && 
+                                 extraVatPercentage !== "" && 
+                                 extraVatPercentage !== null &&
+                                 extraAmount !== undefined && 
+                                 extraAmount !== "" && 
+                                 extraAmount !== null;
+            
+            if (hasVatInputs) {
+                const vatPercentValue = Number(extraVatPercentage) || 0;
+                const extraAmountValue = Number(extraAmount) || 0;
+
+                // Calculate VAT if we have valid percentage and amount (amount can be 0)
+                if (vatPercentValue >= 0 && extraAmountValue >= 0) {
+                    const calculatedVatAmount = (extraAmountValue * (vatPercentValue / 100)).toFixed(2);
+                    // Only update if the value actually changed
+                    if (calculatedVatAmount !== currentVat) {
+                        setValue(`${name}[${index}].extraDeliverables[${extraIndex}].vat`, calculatedVatAmount, { shouldDirty: false });
+                    }
+                } else {
+                    // Invalid values, reset VAT to 0
+                    if (currentVat !== "0" && currentVat !== "") {
+                        setValue(`${name}[${index}].extraDeliverables[${extraIndex}].vat`, "0", { shouldDirty: false });
+                    }
+                }
             } else {
-                setValue(`${name}[${index}].extraDeliverableVat`, "0");
+                // No valid inputs, only reset if we had a value before
+                if (currentVat !== "0" && currentVat !== "" && currentVat !== null && currentVat !== undefined) {
+                    setValue(`${name}[${index}].extraDeliverables[${extraIndex}].vat`, "0", { shouldDirty: false });
+                }
             }
-        } else {
-            // If VAT percentage or extra deliverable amount is cleared, reset VAT amount
-            setValue(`${name}[${index}].extraDeliverableVat`, "0");
-        }
-    }, [extraDeliverableVatPercentage, extraDeliverableAmount, setValue, name, index]);
+        });
+    }, [extraDeliverables, setValue, name, index]);
 
     useEffect(() => {
-        // Calculate total when rate, VAT, or extra deliverable amount changes (quantity is always 1 for passengers)
-        // Total = rate + VAT amount + extra deliverable amount + extra deliverable VAT (if enabled)
+        // Calculate total when rate, VAT, or extra deliverable amounts change (quantity is always 1 for passengers)
+        // Total = rate + VAT amount + sum of all extra deliverable amounts + sum of all extra deliverable VATs
         if (rate != undefined) {
             const rateValue = Number(rate) || 0;
             const vatValue = Number(vat) || 0;
-            const extraAmount = (extraDeliverableEnabled && extraDeliverableAmount) 
-                ? Number(extraDeliverableAmount) || 0 
-                : 0;
-            const extraVatValue = (extraDeliverableEnabled && extraDeliverableVat) 
-                ? Number(extraDeliverableVat) || 0 
-                : 0;
-            const calculatedTotal = (rateValue + vatValue + extraAmount + extraVatValue).toFixed(2);
+            
+            // Sum all extra deliverable amounts and VATs
+            let totalExtraAmount = 0;
+            let totalExtraVat = 0;
+            if (extraDeliverables && Array.isArray(extraDeliverables)) {
+                extraDeliverables.forEach((extra) => {
+                    // Check if amount exists and is not empty
+                    if (extra?.amount !== undefined && extra?.amount !== null && extra?.amount !== "") {
+                        totalExtraAmount += Number(extra.amount) || 0;
+                    }
+                    // Check if vat exists and is not empty
+                    if (extra?.vat !== undefined && extra?.vat !== null && extra?.vat !== "") {
+                        totalExtraVat += Number(extra.vat) || 0;
+                    }
+                });
+            }
+            
+            const calculatedTotal = (rateValue + vatValue + totalExtraAmount + totalExtraVat).toFixed(2);
             setValue(`${name}[${index}].total`, calculatedTotal);
             setValue(`${name}[${index}].quantity`, 1);
         }
-    }, [rate, vat, extraDeliverableEnabled, extraDeliverableAmount, extraDeliverableVat, setValue, name, index]);
+    }, [rate, vat, extraDeliverables, setValue, name, index]);
 
     // DnD
     const {
@@ -199,11 +232,11 @@ const SingleItem = ({
         <div
             style={style}
             {...attributes}
-            className={`${boxDragClasses} group flex flex-col gap-y-5 p-3 my-2 cursor-default rounded-xl bg-gray-50 dark:bg-slate-800 dark:border-gray-600`}
+            className={`${boxDragClasses} group flex flex-col gap-y-6 p-6 my-4 cursor-default rounded-xl bg-gray-50 dark:bg-slate-800 dark:border-gray-600`}
         >
             {/* {isDragging && <div className="bg-blue-600 h-1 rounded-full"></div>} */}
-            <div className="flex flex-wrap justify-between">
-                <p className="font-medium">
+            <div className="flex flex-wrap justify-between items-center pb-2 border-b border-gray-300 dark:border-gray-600">
+                <p className="font-semibold text-lg">
                     Person {index + 1}
                 </p>
 
@@ -238,163 +271,253 @@ const SingleItem = ({
                     </BaseButton>
                 </div>
             </div>
-            <div className="space-y-4">
-                <div className="flex flex-wrap justify-between gap-y-5 gap-x-2">
-                    <FormInput
-                        name={`${name}[${index}].passengerName`}
-                        label={`${columnNames.passengerName} (Person ${index + 1})`}
-                        placeholder={`Enter passenger ${index + 1} name`}
-                        vertical
-                    />
-
-                    <FormInput
-                        name={`${name}[${index}].name`}
-                        label={columnNames.airlines}
-                        placeholder="Enter airline name"
-                        vertical
-                    />
-
-                    <FormInput
-                        name={`${name}[${index}].serviceType`}
-                        label={columnNames.serviceType}
-                        placeholder="Enter type of service"
-                        className="w-[12rem]"
-                        vertical
-                    />
-
-                    <FormInput
-                        name={`${name}[${index}].unitPrice`}
-                        type="number"
-                        label="Rate"
-                        labelHelper={`(${currency})`}
-                        placeholder="Enter rate"
-                        className="w-[8rem]"
-                        vertical
-                    />
-
-                    <FormInput
-                        name={`${name}[${index}].vatPercentage`}
-                        type="number"
-                        label="VAT %"
-                        labelHelper="(%)"
-                        placeholder="Enter VAT %"
-                        className="w-[8rem]"
-                        vertical
-                    />
-
-                    <FormInput
-                        name={`${name}[${index}].vat`}
-                        type="number"
-                        label="VAT Amount"
-                        labelHelper={`(${currency})`}
-                        placeholder="Auto-calculated"
-                        className="w-[8rem]"
-                        vertical
-                        readOnly
-                    />
-
-                    <div className="flex flex-col gap-2">
-                        <div>
-                            <Label>Total</Label>
+            <div className="space-y-6">
+                {/* Passenger and Service Details */}
+                <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Passenger & Service Details</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="w-full">
+                            <FormInput
+                                name={`${name}[${index}].passengerName`}
+                                label={`${columnNames.passengerName} (Person ${index + 1})`}
+                                placeholder={`Enter passenger ${index + 1} name`}
+                                vertical
+                                className="w-full"
+                            />
                         </div>
-                        <Input
-                            value={`${total} ${currency}`}
-                            readOnly
-                            placeholder="Item total"
-                            className="border-none font-medium text-lg bg-transparent"
-                            size={10}
-                        />
+
+                        <div className="w-full">
+                            <FormInput
+                                name={`${name}[${index}].name`}
+                                label={columnNames.airlines}
+                                placeholder="Enter airline name"
+                                vertical
+                                className="w-full"
+                            />
+                        </div>
+
+                        <div className="w-full">
+                            <FormInput
+                                name={`${name}[${index}].serviceType`}
+                                label={columnNames.serviceType}
+                                placeholder="Enter type of service"
+                                vertical
+                                className="w-full"
+                            />
+                        </div>
                     </div>
                 </div>
-                
-                <FormTextarea
-                    name={`${name}[${index}].description`}
-                    label={columnNames.route}
-                    placeholder="Enter description"
-                />
 
-                {/* Extra Deliverable Section */}
-                <div className="space-y-3 border-t pt-4 mt-4">
-                    <div className="flex items-center gap-3">
-                        <Label htmlFor={`extraDeliverableEnabled-${index}`}>
-                            Enable Extra Deliverable Row
-                        </Label>
-                        <Switch
-                            id={`extraDeliverableEnabled-${index}`}
-                            checked={extraDeliverableEnabled || false}
-                            onCheckedChange={(value) => {
-                                setValue(`${name}[${index}].extraDeliverableEnabled`, value);
-                            }}
-                        />
-                    </div>
-
-                    {extraDeliverableEnabled && (
-                        <>
-                        <div className="flex items-center gap-3">
-                            <Label htmlFor={`extraDeliverableShowVat-${index}`}>
-                                Show VAT in Template
-                            </Label>
-                            <Switch
-                                id={`extraDeliverableShowVat-${index}`}
-                                checked={extraDeliverableShowVat || false}
-                                onCheckedChange={(value) => {
-                                    setValue(`${name}[${index}].extraDeliverableShowVat`, value);
-                                }}
+                {/* Financial Details */}
+                <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Financial Details</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="w-full">
+                            <FormInput
+                                name={`${name}[${index}].unitPrice`}
+                                type="number"
+                                label="Rate"
+                                labelHelper={`(${currency})`}
+                                placeholder="Enter rate"
+                                vertical
+                                className="w-full"
                             />
                         </div>
-                        <div className="flex flex-wrap justify-between gap-y-5 gap-x-2">
-                            <FormInput
-                                name={`${name}[${index}].extraDeliverable`}
-                                label="Extra Deliverable"
-                                placeholder="Enter extra deliverable details"
-                                className="flex-1 min-w-[200px]"
-                                vertical
-                            />
 
+                        <div className="w-full">
                             <FormInput
-                                name={`${name}[${index}].extraDeliverableServiceType`}
-                                label={columnNames.serviceType}
-                                placeholder="Enter service type"
-                                className="w-[8rem]"
-                                vertical
-                            />
-
-                            <FormInput
-                                name={`${name}[${index}].extraDeliverableAmount`}
-                                type="number"
-                                label="Extra Deliverable Amount"
-                                labelHelper={`(${currency})`}
-                                placeholder="Enter amount"
-                                className="w-[8rem]"
-                                vertical
-                            />
-
-                            <FormInput
-                                name={`${name}[${index}].extraDeliverableVatPercentage`}
+                                name={`${name}[${index}].vatPercentage`}
                                 type="number"
                                 label="VAT %"
                                 labelHelper="(%)"
                                 placeholder="Enter VAT %"
-                                className="w-[8rem]"
                                 vertical
+                                className="w-full"
                             />
+                        </div>
 
+                        <div className="w-full">
                             <FormInput
-                                name={`${name}[${index}].extraDeliverableVat`}
+                                name={`${name}[${index}].vat`}
                                 type="number"
                                 label="VAT Amount"
                                 labelHelper={`(${currency})`}
                                 placeholder="Auto-calculated"
-                                className="w-[8rem]"
                                 vertical
                                 readOnly
+                                className="w-full"
                             />
                         </div>
-                        </>
+
+                        <div className="w-full flex flex-col gap-2">
+                            <Label className="text-sm font-medium">Total</Label>
+                            <Input
+                                value={`${total} ${currency}`}
+                                readOnly
+                                placeholder="Item total"
+                                className="w-full h-10 border-gray-300 dark:border-gray-600 font-semibold text-base bg-gray-100 dark:bg-slate-700"
+                            />
+                        </div>
+                    </div>
+                </div>
+                
+                {/* Route/Description */}
+                <div className="space-y-2">
+                    <FormTextarea
+                        name={`${name}[${index}].description`}
+                        label={columnNames.route}
+                        placeholder="Enter description"
+                    />
+                </div>
+
+                {/* Extra Deliverables Section */}
+                <div className="space-y-4 border-t border-gray-300 dark:border-gray-600 pt-6">
+                    <div className="flex items-center justify-between pb-2">
+                        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Extra Deliverables</h3>
+                        <BaseButton
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                                appendExtraDeliverable({
+                                    name: "",
+                                    rowName: "", // Custom name for this row
+                                    serviceType: "",
+                                    amount: "0",
+                                    vatPercentage: "",
+                                    vat: "0",
+                                    showVat: false,
+                                });
+                            }}
+                        >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Add Extra Deliverable
+                        </BaseButton>
+                    </div>
+
+                    {extraDeliverableFields.length > 0 && (
+                        <div className="space-y-5">
+                            {extraDeliverableFields.map((extraField, extraIndex) => {
+                                // Get the current value from the form, not just from watched values
+                                const extraDeliverable = extraDeliverables[extraIndex] || {};
+                                const extraShowVat = extraDeliverable?.showVat || false;
+                                
+                                // Ensure we have a valid entry - if not, skip rendering
+                                if (!extraField) return null;
+                                
+                                return (
+                                    <div key={extraField.id} className="p-5 border-2 border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-slate-900 space-y-5">
+                                        <div className="flex items-center justify-between pb-2 border-b border-gray-200 dark:border-gray-700">
+                                            <Label className="font-semibold text-base">Extra Deliverable {extraIndex + 1}</Label>
+                                            <BaseButton
+                                                type="button"
+                                                size="sm"
+                                                variant="destructive"
+                                                onClick={() => removeExtraDeliverable(extraIndex)}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </BaseButton>
+                                        </div>
+
+                                        <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-800 rounded-md">
+                                            <Label htmlFor={`extraShowVat-${index}-${extraIndex}`} className="font-medium">
+                                                Show VAT in Template
+                                            </Label>
+                                            <Switch
+                                                id={`extraShowVat-${index}-${extraIndex}`}
+                                                checked={extraShowVat}
+                                                onCheckedChange={(value) => {
+                                                    setValue(`${name}[${index}].extraDeliverables[${extraIndex}].showVat`, value);
+                                                }}
+                                            />
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            <div className="w-full">
+                                                <FormInput
+                                                    name={`${name}[${index}].extraDeliverables[${extraIndex}].rowName`}
+                                                    label="Row Name (Passenger Name Column)"
+                                                    placeholder="Enter row name/title"
+                                                    vertical
+                                                    className="w-full"
+                                                />
+                                            </div>
+                                            
+                                            {showExtraDeliverableColumns.name && (
+                                                <div className="w-full">
+                                                    <FormInput
+                                                        name={`${name}[${index}].extraDeliverables[${extraIndex}].name`}
+                                                        label={extraDeliverableColumnNames.name}
+                                                        placeholder="Enter extra deliverable details"
+                                                        vertical
+                                                        className="w-full"
+                                                    />
+                                                </div>
+                                            )}
+
+                                            {showExtraDeliverableColumns.serviceType && (
+                                                <div className="w-full">
+                                                    <FormInput
+                                                        name={`${name}[${index}].extraDeliverables[${extraIndex}].serviceType`}
+                                                        label={extraDeliverableColumnNames.serviceType}
+                                                        placeholder="Enter service type"
+                                                        vertical
+                                                        className="w-full"
+                                                    />
+                                                </div>
+                                            )}
+
+                                            {showExtraDeliverableColumns.amount && (
+                                                <div className="w-full">
+                                                    <FormInput
+                                                        name={`${name}[${index}].extraDeliverables[${extraIndex}].amount`}
+                                                        type="number"
+                                                        label={extraDeliverableColumnNames.amount}
+                                                        labelHelper={`(${currency})`}
+                                                        placeholder="Enter amount"
+                                                        vertical
+                                                        className="w-full"
+                                                    />
+                                                </div>
+                                            )}
+
+                                            {showExtraDeliverableColumns.vatPercentage && (
+                                                <div className="w-full">
+                                                    <FormInput
+                                                        name={`${name}[${index}].extraDeliverables[${extraIndex}].vatPercentage`}
+                                                        type="number"
+                                                        label={extraDeliverableColumnNames.vatPercentage}
+                                                        labelHelper="(%)"
+                                                        placeholder="Enter VAT %"
+                                                        vertical
+                                                        className="w-full"
+                                                    />
+                                                </div>
+                                            )}
+
+                                            {showExtraDeliverableColumns.vat && (
+                                                <div className="w-full">
+                                                    <FormInput
+                                                        name={`${name}[${index}].extraDeliverables[${extraIndex}].vat`}
+                                                        type="number"
+                                                        label={extraDeliverableColumnNames.vat}
+                                                        labelHelper={`(${currency})`}
+                                                        placeholder="Auto-calculated"
+                                                        vertical
+                                                        readOnly
+                                                        className="w-full"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     )}
                 </div>
             </div>
-            <div>
+            <div className="pt-4 border-t border-gray-300 dark:border-gray-600">
                 {/* Not allowing deletion for first item when there is only 1 item */}
                 {fields.length > 1 && (
                     <BaseButton

@@ -35,7 +35,21 @@ export async function GET(req: NextRequest) {
                         airlines: "Airlines",
                         serviceType: "Type of Service",
                         amount: "Amount",
-                    }
+                    },
+                    extraDeliverableColumnNames: {
+                        name: "Extra Deliverable",
+                        serviceType: "Type of Service",
+                        amount: "Amount",
+                        vatPercentage: "VAT %",
+                        vat: "VAT Amount",
+                    },
+                    showExtraDeliverableColumns: {
+                        name: true,
+                        serviceType: true,
+                        amount: true,
+                        vatPercentage: true,
+                        vat: true,
+                    },
                 },
                 { status: 200 }
             );
@@ -50,13 +64,43 @@ export async function GET(req: NextRequest) {
             amount: "Amount",
         };
 
+        const defaultExtraDeliverableColumnNames = {
+            name: "Extra Deliverable",
+            serviceType: "Type of Service",
+            amount: "Amount",
+            vatPercentage: "VAT %",
+            vat: "VAT Amount",
+        };
+
+        const defaultShowExtraDeliverableColumns = {
+            name: true,
+            serviceType: true,
+            amount: true,
+            vatPercentage: true,
+            vat: true,
+        };
+
         const columnNames = {
             ...defaultColumnNames,
             ...(preferences.columnNames || {}),
         };
 
+        const extraDeliverableColumnNames = {
+            ...defaultExtraDeliverableColumnNames,
+            ...(preferences.extraDeliverableColumnNames || {}),
+        };
+
+        const showExtraDeliverableColumns = {
+            ...defaultShowExtraDeliverableColumns,
+            ...(preferences.showExtraDeliverableColumns || {}),
+        };
+
         return NextResponse.json(
-            { columnNames },
+            { 
+                columnNames,
+                extraDeliverableColumnNames,
+                showExtraDeliverableColumns,
+            },
             { status: 200 }
         );
     } catch (error) {
@@ -84,7 +128,7 @@ export async function PUT(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { columnNames } = body;
+        const { columnNames, extraDeliverableColumnNames, showExtraDeliverableColumns } = body;
 
         if (!columnNames || typeof columnNames !== "object") {
             return NextResponse.json(
@@ -108,6 +152,8 @@ export async function PUT(req: NextRequest) {
                 {
                     $set: {
                         columnNames,
+                        extraDeliverableColumnNames,
+                        showExtraDeliverableColumns,
                         updatedAt: new Date(),
                     },
                 }
@@ -117,6 +163,8 @@ export async function PUT(req: NextRequest) {
             const preferencesData: Omit<UserPreferences, "_id"> = {
                 userId,
                 columnNames,
+                extraDeliverableColumnNames,
+                showExtraDeliverableColumns,
                 createdAt: new Date(),
                 updatedAt: new Date(),
             };
@@ -125,7 +173,12 @@ export async function PUT(req: NextRequest) {
         }
 
         return NextResponse.json(
-            { message: "Preferences saved successfully", columnNames },
+            { 
+                message: "Preferences saved successfully", 
+                columnNames,
+                extraDeliverableColumnNames,
+                showExtraDeliverableColumns,
+            },
             { status: 200 }
         );
     } catch (error) {

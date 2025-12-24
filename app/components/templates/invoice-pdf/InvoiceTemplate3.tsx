@@ -36,6 +36,32 @@ const InvoiceTemplate = (data: InvoiceType) => {
     ...(details.columnNames || {}),
   };
   
+  // Extra deliverable column names
+  const defaultExtraDeliverableColumnNames = {
+    name: "Extra Deliverable",
+    serviceType: "Type of Service",
+    amount: "Amount",
+    vatPercentage: "VAT %",
+    vat: "VAT Amount",
+  };
+  const extraDeliverableColumnNames = {
+    ...defaultExtraDeliverableColumnNames,
+    ...(details.extraDeliverableColumnNames || {}),
+  };
+  
+  // Extra deliverable column visibility
+  const defaultShowExtraDeliverableColumns = {
+    name: true,
+    serviceType: true,
+    amount: true,
+    vatPercentage: true,
+    vat: true,
+  };
+  const showExtraDeliverableColumns = {
+    ...defaultShowExtraDeliverableColumns,
+    ...(details.showExtraDeliverableColumns || {}),
+  };
+  
   // Calculate visible column count for colspan
   const visibleColumnsCount = [
     showPassengerName,
@@ -211,43 +237,130 @@ const InvoiceTemplate = (data: InvoiceType) => {
                         </td>
                       )}
                     </tr>
-                    {item.extraDeliverableEnabled && (
+                    {/* Render extra deliverables array */}
+                    {item.extraDeliverables && Array.isArray(item.extraDeliverables) && item.extraDeliverables.length > 0 && (
                       <>
-                        <tr className="align-top">
-                          {showPassengerName && <td className="border border-gray-400 px-4 py-4"></td>}
-                          {showRoute && (
-                            <td className="border border-gray-400 px-4 py-4 text-gray-700 break-words">
-                              {item.extraDeliverable || ""}
-                            </td>
-                          )}
-                          {showAirlines && <td className="border border-gray-400 px-4 py-4"></td>}
-                          {showServiceType && (
-                            <td className="border border-gray-400 px-4 py-4 text-gray-700 break-words">
-                              {item.extraDeliverableServiceType || "-"}
-                            </td>
-                          )}
-                          {showAmount && (
-                            <td className="border border-gray-400 px-4 py-4 text-right font-medium">
-                              {item.extraDeliverableAmount 
-                                ? `${formatNumberWithCommas(Number(item.extraDeliverableAmount) || 0)} ${details.currency}`
-                                : ""}
-                            </td>
-                          )}
-                        </tr>
-                        {item.extraDeliverableShowVat && item.extraDeliverableVat !== undefined && Number(item.extraDeliverableVat) > 0 && (
-                          <tr className="align-top">
-                            <td className="border border-gray-400 px-4 py-2 text-gray-700" colSpan={visibleColumnsCount - 1}>
-                              <span className="font-medium">
-                                Extra Deliverable VAT{item.extraDeliverableVatPercentage ? ` = ${item.extraDeliverableVatPercentage}%` : ''}
-                              </span>
-                            </td>
-                            {showAmount && (
-                              <td className="border border-gray-400 px-4 py-2 text-right font-medium">
-                                {formatNumberWithCommas(Number(item.extraDeliverableVat) || 0)}{" "}
-                                {details.currency}
-                              </td>
+                        {item.extraDeliverables.map((extra, extraIndex) => {
+                          // Show the row if it has any meaningful data
+                          // Check for amount as number (not just truthy, since 0 is valid)
+                          const hasAmount = extra?.amount !== undefined && extra?.amount !== null && extra?.amount !== "";
+                          const hasName = extra?.name && extra.name.trim() !== "";
+                          const hasRowName = extra?.rowName && extra.rowName.trim() !== "";
+                          const hasServiceType = extra?.serviceType && extra.serviceType.trim() !== "";
+                          const hasVatPercentage = extra?.vatPercentage !== undefined && extra?.vatPercentage !== null && extra?.vatPercentage !== "";
+                          const hasData = hasAmount || hasName || hasRowName || hasServiceType || hasVatPercentage;
+                          
+                          // Always show if there's any data, even if amount is 0
+                          if (!hasData) return null;
+                          
+                          return (
+                            <tr key={extraIndex} className="align-top">
+                              {showPassengerName && (
+                                <td className="border border-gray-400 px-4 py-4 font-semibold text-gray-900">
+                                  {extra.rowName || ""}
+                                </td>
+                              )}
+                              {showRoute && (
+                                <td className="border border-gray-400 px-4 py-4 text-gray-700 break-words">
+                                  {showExtraDeliverableColumns.name ? (extra.name || "") : ""}
+                                </td>
+                              )}
+                              {showAirlines && <td className="border border-gray-400 px-4 py-4"></td>}
+                              {showServiceType && (
+                                <td className="border border-gray-400 px-4 py-4 text-gray-700 break-words">
+                                  {showExtraDeliverableColumns.serviceType ? (extra.serviceType || "-") : "-"}
+                                </td>
+                              )}
+                              {showAmount && (
+                                <td className="border border-gray-400 px-4 py-4 text-right font-medium">
+                                  {showExtraDeliverableColumns.amount && (extra.amount !== undefined && extra.amount !== null && extra.amount !== "")
+                                    ? `${formatNumberWithCommasNoDecimals(Number(extra.amount) || 0)} ${details.currency}`
+                                    : ""}
+                                </td>
+                              )}
+                            </tr>
+                          );
+                        })}
+                        
+                        {/* Show merged VAT row for all extra deliverables */}
+                        {(() => {
+                          // Calculate total VAT from all extra deliverables that have showVat enabled
+                          let totalExtraVat = 0;
+                          let hasAnyVat = false;
+                          const vatPercentages: string[] = [];
+                          
+                          if (item.extraDeliverables && Array.isArray(item.extraDeliverables)) {
+                            item.extraDeliverables.forEach((extra) => {
+                              if (extra?.showVat && extra?.vat !== undefined && extra?.vat !== null && extra?.vat !== "" && Number(extra.vat) > 0) {
+                                totalExtraVat += Number(extra.vat) || 0;
+                                hasAnyVat = true;
+                                if (extra.vatPercentage) {
+                                  vatPercentages.push(`${extra.vatPercentage}%`);
+                                }
+                              }
+                            });
+                          }
+                          
+                          // Show single merged VAT row if there's any VAT
+                          if (hasAnyVat && totalExtraVat > 0) {
+                            return (
+                              <tr className="align-top">
+                                <td className="border border-gray-400 px-4 py-2 text-gray-700" colSpan={visibleColumnsCount - 1}>
+                                  <span className="font-medium">
+                                    {extraDeliverableColumnNames.vat}{vatPercentages.length > 0 ? ` = ${vatPercentages.join(', ')}` : ''}
+                                  </span>
+                                </td>
+                                {showAmount && showExtraDeliverableColumns.vat && (
+                                  <td className="border border-gray-400 px-4 py-2 text-right font-medium">
+                                    {formatNumberWithCommas(totalExtraVat)}{" "}
+                                    {details.currency}
+                                  </td>
+                                )}
+                              </tr>
+                            );
+                          }
+                          return null;
+                        })()}
+                        {/* Legacy support for old single extraDeliverable structure */}
+                        {item.extraDeliverableEnabled && !item.extraDeliverables && (
+                          <>
+                            <tr className="align-top">
+                              {showPassengerName && <td className="border border-gray-400 px-4 py-4"></td>}
+                              {showRoute && (
+                                <td className="border border-gray-400 px-4 py-4 text-gray-700 break-words">
+                                  {item.extraDeliverable || ""}
+                                </td>
+                              )}
+                              {showAirlines && <td className="border border-gray-400 px-4 py-4"></td>}
+                              {showServiceType && (
+                                <td className="border border-gray-400 px-4 py-4 text-gray-700 break-words">
+                                  {item.extraDeliverableServiceType || "-"}
+                                </td>
+                              )}
+                              {showAmount && (
+                                <td className="border border-gray-400 px-4 py-4 text-right font-medium">
+                                  {item.extraDeliverableAmount 
+                                    ? `${formatNumberWithCommas(Number(item.extraDeliverableAmount) || 0)} ${details.currency}`
+                                    : ""}
+                                </td>
+                              )}
+                            </tr>
+                            {item.extraDeliverableShowVat && item.extraDeliverableVat !== undefined && Number(item.extraDeliverableVat) > 0 && (
+                              <tr className="align-top">
+                                <td className="border border-gray-400 px-4 py-2 text-gray-700" colSpan={visibleColumnsCount - 1}>
+                                  <span className="font-medium">
+                                    Extra Deliverable VAT{item.extraDeliverableVatPercentage ? ` = ${item.extraDeliverableVatPercentage}%` : ''}
+                                  </span>
+                                </td>
+                                {showAmount && (
+                                  <td className="border border-gray-400 px-4 py-2 text-right font-medium">
+                                    {formatNumberWithCommas(Number(item.extraDeliverableVat) || 0)}{" "}
+                                    {details.currency}
+                                  </td>
+                                )}
+                              </tr>
                             )}
-                          </tr>
+                          </>
                         )}
                       </>
                     )}

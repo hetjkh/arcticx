@@ -36,18 +36,18 @@ const FormInput = ({
             control={control}
             name={name}
             render={({ field }) => (
-                <FormItem>
-                    {label && <FormLabel>{`${label}:`}</FormLabel>}
+                <FormItem className="w-full space-y-2">
+                    {label && <FormLabel className="text-sm font-medium">{`${label}:`}</FormLabel>}
 
                     {labelHelper && (
-                        <span className="text-xs"> {labelHelper}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400"> {labelHelper}</span>
                     )}
 
                     <FormControl>
                         <Input
                             {...field}
                             placeholder={placeholder}
-                            className="w-[13rem]"
+                            className={props.className || "w-full"}
                             {...props}
                         />
                     </FormControl>

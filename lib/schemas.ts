@@ -114,6 +114,16 @@ const ItemSchema = z.object({
     serviceType: fieldValidators.stringOptional,
     vatPercentage: fieldValidators.stringToNumber.optional(),
     vat: fieldValidators.stringToNumber.optional(),
+    extraDeliverables: z.array(z.object({
+        name: fieldValidators.stringOptional,
+        rowName: fieldValidators.stringOptional, // Custom name/title for this extra deliverable row
+        serviceType: fieldValidators.stringOptional,
+        amount: fieldValidators.stringToNumber.optional(),
+        vatPercentage: fieldValidators.stringToNumber.optional(),
+        vat: fieldValidators.stringToNumber.optional(),
+        showVat: z.boolean().optional(),
+    })).optional(),
+    // Legacy fields for backward compatibility
     extraDeliverableEnabled: z.boolean().optional(),
     extraDeliverable: fieldValidators.stringOptional,
     extraDeliverableServiceType: fieldValidators.stringOptional,
@@ -186,6 +196,20 @@ const InvoiceDetailsSchema = z.object({
         airlines: z.string().optional(),
         serviceType: z.string().optional(),
         amount: z.string().optional(),
+    }).optional(),
+    extraDeliverableColumnNames: z.object({
+        name: z.string().optional(),
+        serviceType: z.string().optional(),
+        amount: z.string().optional(),
+        vatPercentage: z.string().optional(),
+        vat: z.string().optional(),
+    }).optional(),
+    showExtraDeliverableColumns: z.object({
+        name: z.boolean().optional(),
+        serviceType: z.boolean().optional(),
+        amount: z.boolean().optional(),
+        vatPercentage: z.boolean().optional(),
+        vat: z.boolean().optional(),
     }).optional(),
 });
 

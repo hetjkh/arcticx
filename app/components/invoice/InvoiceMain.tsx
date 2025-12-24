@@ -8,9 +8,11 @@ import { Form } from "@/components/ui/form";
 
 // Components
 import { InvoiceActions, InvoiceForm } from "@/app/components";
+import InvoiceSettingsPanel from "@/app/components/invoice/settings/InvoiceSettingsPanel";
 
 // Context
 import { useInvoiceContext } from "@/contexts/InvoiceContext";
+import { useInvoiceSettings } from "@/contexts/InvoiceSettingsContext";
 
 // Types
 import { InvoiceType } from "@/types";
@@ -20,6 +22,7 @@ const InvoiceMain = () => {
 
     // Get the needed values from invoice context
     const { onFormSubmit } = useInvoiceContext();
+    const { isSettingsOpen, closeSettings } = useInvoiceSettings();
 
     return (
         <>
@@ -35,6 +38,7 @@ const InvoiceMain = () => {
                     </div>
                 </form>
             </Form>
+            <InvoiceSettingsPanel isOpen={isSettingsOpen} onClose={closeSettings} />
         </>
     );
 };

@@ -15,12 +15,22 @@ import { LanguageSelector, ThemeSwitcher, LoginModal, SignupModal, BaseButton } 
 
 // Contexts
 import { useAuth } from "@/contexts/AuthContext";
+import { useInvoiceSettings } from "@/contexts/InvoiceSettingsContext";
 
 // Icons
-import { LogOut, User, Users } from "lucide-react";
+import { LogOut, User, Users, Settings } from "lucide-react";
 
 const BaseNavbar = () => {
     const { user, logout } = useAuth();
+    
+    // Try to get settings context, but handle if not available (e.g., on non-invoice pages)
+    let openSettings: (() => void) | null = null;
+    try {
+        const settings = useInvoiceSettings();
+        openSettings = settings.openSettings;
+    } catch {
+        // Settings context not available, button won't work but won't crash
+    }
 
     const handleLogout = async () => {
         await logout();
@@ -44,6 +54,17 @@ const BaseNavbar = () => {
                         </span>
                     </Link>
                     <div className="flex items-center gap-3">
+                        {openSettings && (
+                            <BaseButton
+                                variant="ghost"
+                                size="sm"
+                                onClick={openSettings}
+                                tooltipLabel="Invoice Settings"
+                            >
+                                <Settings className="w-4 h-4 mr-2" />
+                                Settings
+                            </BaseButton>
+                        )}
                         {user && (
                             <Link href="/clients">
                                 <BaseButton variant="ghost" size="sm" tooltipLabel="Clients">

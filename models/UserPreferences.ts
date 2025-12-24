@@ -10,6 +10,20 @@ export interface UserPreferences {
         serviceType?: string;
         amount?: string;
     };
+    extraDeliverableColumnNames?: {
+        name?: string;
+        serviceType?: string;
+        amount?: string;
+        vatPercentage?: string;
+        vat?: string;
+    };
+    showExtraDeliverableColumns?: {
+        name?: boolean;
+        serviceType?: boolean;
+        amount?: boolean;
+        vatPercentage?: boolean;
+        vat?: boolean;
+    };
     createdAt: Date;
     updatedAt: Date;
 }
