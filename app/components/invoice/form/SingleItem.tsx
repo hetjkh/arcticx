@@ -387,6 +387,13 @@ const SingleItem = ({
                                     vatPercentage: "",
                                     vat: "0",
                                     showVat: false,
+                                    showColumns: {
+                                        name: true,
+                                        serviceType: true,
+                                        amount: true,
+                                        vatPercentage: true,
+                                        vat: true,
+                                    },
                                 });
                             }}
                         >
@@ -401,6 +408,16 @@ const SingleItem = ({
                                 // Get the current value from the form, not just from watched values
                                 const extraDeliverable = extraDeliverables[extraIndex] || {};
                                 const extraShowVat = extraDeliverable?.showVat || false;
+                                
+                                // Get per-deliverable column visibility, defaulting to all true if not set
+                                const defaultShowColumns = {
+                                    name: true,
+                                    serviceType: true,
+                                    amount: true,
+                                    vatPercentage: true,
+                                    vat: true,
+                                };
+                                const showColumns = extraDeliverable?.showColumns || defaultShowColumns;
                                 
                                 // Ensure we have a valid entry - if not, skip rendering
                                 if (!extraField) return null;
@@ -432,6 +449,93 @@ const SingleItem = ({
                                             />
                                         </div>
 
+                                        {/* Column Visibility Controls */}
+                                        <div className="p-4 bg-gray-50 dark:bg-slate-800 rounded-md border border-gray-200 dark:border-gray-700">
+                                            <Label className="text-sm font-semibold mb-3 block">Column Visibility (Toggle columns for this deliverable)</Label>
+                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                                                <div className="flex items-center gap-2">
+                                                    <Switch
+                                                        id={`showName-${index}-${extraIndex}`}
+                                                        checked={showColumns.name ?? true}
+                                                        onCheckedChange={(value) => {
+                                                            const currentShowColumns = extraDeliverable?.showColumns || defaultShowColumns;
+                                                            setValue(`${name}[${index}].extraDeliverables[${extraIndex}].showColumns`, {
+                                                                ...currentShowColumns,
+                                                                name: value,
+                                                            });
+                                                        }}
+                                                    />
+                                                    <Label htmlFor={`showName-${index}-${extraIndex}`} className="text-sm cursor-pointer">
+                                                        {extraDeliverableColumnNames.name}
+                                                    </Label>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Switch
+                                                        id={`showServiceType-${index}-${extraIndex}`}
+                                                        checked={showColumns.serviceType ?? true}
+                                                        onCheckedChange={(value) => {
+                                                            const currentShowColumns = extraDeliverable?.showColumns || defaultShowColumns;
+                                                            setValue(`${name}[${index}].extraDeliverables[${extraIndex}].showColumns`, {
+                                                                ...currentShowColumns,
+                                                                serviceType: value,
+                                                            });
+                                                        }}
+                                                    />
+                                                    <Label htmlFor={`showServiceType-${index}-${extraIndex}`} className="text-sm cursor-pointer">
+                                                        {extraDeliverableColumnNames.serviceType}
+                                                    </Label>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Switch
+                                                        id={`showAmount-${index}-${extraIndex}`}
+                                                        checked={showColumns.amount ?? true}
+                                                        onCheckedChange={(value) => {
+                                                            const currentShowColumns = extraDeliverable?.showColumns || defaultShowColumns;
+                                                            setValue(`${name}[${index}].extraDeliverables[${extraIndex}].showColumns`, {
+                                                                ...currentShowColumns,
+                                                                amount: value,
+                                                            });
+                                                        }}
+                                                    />
+                                                    <Label htmlFor={`showAmount-${index}-${extraIndex}`} className="text-sm cursor-pointer">
+                                                        {extraDeliverableColumnNames.amount}
+                                                    </Label>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Switch
+                                                        id={`showVatPercentage-${index}-${extraIndex}`}
+                                                        checked={showColumns.vatPercentage ?? true}
+                                                        onCheckedChange={(value) => {
+                                                            const currentShowColumns = extraDeliverable?.showColumns || defaultShowColumns;
+                                                            setValue(`${name}[${index}].extraDeliverables[${extraIndex}].showColumns`, {
+                                                                ...currentShowColumns,
+                                                                vatPercentage: value,
+                                                            });
+                                                        }}
+                                                    />
+                                                    <Label htmlFor={`showVatPercentage-${index}-${extraIndex}`} className="text-sm cursor-pointer">
+                                                        {extraDeliverableColumnNames.vatPercentage}
+                                                    </Label>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Switch
+                                                        id={`showVat-${index}-${extraIndex}`}
+                                                        checked={showColumns.vat ?? true}
+                                                        onCheckedChange={(value) => {
+                                                            const currentShowColumns = extraDeliverable?.showColumns || defaultShowColumns;
+                                                            setValue(`${name}[${index}].extraDeliverables[${extraIndex}].showColumns`, {
+                                                                ...currentShowColumns,
+                                                                vat: value,
+                                                            });
+                                                        }}
+                                                    />
+                                                    <Label htmlFor={`showVat-${index}-${extraIndex}`} className="text-sm cursor-pointer">
+                                                        {extraDeliverableColumnNames.vat}
+                                                    </Label>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                             <div className="w-full">
                                                 <FormInput
@@ -443,7 +547,7 @@ const SingleItem = ({
                                                 />
                                             </div>
                                             
-                                            {showExtraDeliverableColumns.name && (
+                                            {showColumns.name && (
                                                 <div className="w-full">
                                                     <FormInput
                                                         name={`${name}[${index}].extraDeliverables[${extraIndex}].name`}
@@ -455,7 +559,7 @@ const SingleItem = ({
                                                 </div>
                                             )}
 
-                                            {showExtraDeliverableColumns.serviceType && (
+                                            {showColumns.serviceType && (
                                                 <div className="w-full">
                                                     <FormInput
                                                         name={`${name}[${index}].extraDeliverables[${extraIndex}].serviceType`}
@@ -467,7 +571,7 @@ const SingleItem = ({
                                                 </div>
                                             )}
 
-                                            {showExtraDeliverableColumns.amount && (
+                                            {showColumns.amount && (
                                                 <div className="w-full">
                                                     <FormInput
                                                         name={`${name}[${index}].extraDeliverables[${extraIndex}].amount`}
@@ -481,7 +585,7 @@ const SingleItem = ({
                                                 </div>
                                             )}
 
-                                            {showExtraDeliverableColumns.vatPercentage && (
+                                            {showColumns.vatPercentage && (
                                                 <div className="w-full">
                                                     <FormInput
                                                         name={`${name}[${index}].extraDeliverables[${extraIndex}].vatPercentage`}
@@ -495,7 +599,7 @@ const SingleItem = ({
                                                 </div>
                                             )}
 
-                                            {showExtraDeliverableColumns.vat && (
+                                            {showColumns.vat && (
                                                 <div className="w-full">
                                                     <FormInput
                                                         name={`${name}[${index}].extraDeliverables[${extraIndex}].vat`}

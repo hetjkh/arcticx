@@ -122,6 +122,13 @@ const ItemSchema = z.object({
         vatPercentage: fieldValidators.stringToNumber.optional(),
         vat: fieldValidators.stringToNumber.optional(),
         showVat: z.boolean().optional(),
+        showColumns: z.object({
+            name: z.boolean().optional(),
+            serviceType: z.boolean().optional(),
+            amount: z.boolean().optional(),
+            vatPercentage: z.boolean().optional(),
+            vat: z.boolean().optional(),
+        }).optional(),
     })).optional(),
     // Legacy fields for backward compatibility
     extraDeliverableEnabled: z.boolean().optional(),

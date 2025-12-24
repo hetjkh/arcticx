@@ -241,6 +241,16 @@ const InvoiceTemplate = (data: InvoiceType) => {
                     {item.extraDeliverables && Array.isArray(item.extraDeliverables) && item.extraDeliverables.length > 0 && (
                       <>
                         {item.extraDeliverables.map((extra, extraIndex) => {
+                          // Get per-deliverable column visibility, defaulting to all true if not set
+                          const defaultShowColumns = {
+                            name: true,
+                            serviceType: true,
+                            amount: true,
+                            vatPercentage: true,
+                            vat: true,
+                          };
+                          const showColumns = extra?.showColumns || defaultShowColumns;
+                          
                           // Show the row if it has any meaningful data
                           // Check for amount as number (not just truthy, since 0 is valid)
                           const hasAmount = extra?.amount !== undefined && extra?.amount !== null && extra?.amount !== "";
@@ -262,18 +272,18 @@ const InvoiceTemplate = (data: InvoiceType) => {
                               )}
                               {showRoute && (
                                 <td className="border border-gray-400 px-4 py-4 text-gray-700 break-words">
-                                  {showExtraDeliverableColumns.name ? (extra.name || "") : ""}
+                                  {showColumns.name ? (extra.name || "") : ""}
                                 </td>
                               )}
                               {showAirlines && <td className="border border-gray-400 px-4 py-4"></td>}
                               {showServiceType && (
                                 <td className="border border-gray-400 px-4 py-4 text-gray-700 break-words">
-                                  {showExtraDeliverableColumns.serviceType ? (extra.serviceType || "-") : "-"}
+                                  {showColumns.serviceType ? (extra.serviceType || "-") : "-"}
                                 </td>
                               )}
                               {showAmount && (
                                 <td className="border border-gray-400 px-4 py-4 text-right font-medium">
-                                  {showExtraDeliverableColumns.amount && (extra.amount !== undefined && extra.amount !== null && extra.amount !== "")
+                                  {showColumns.amount && (extra.amount !== undefined && extra.amount !== null && extra.amount !== "")
                                     ? `${formatNumberWithCommasNoDecimals(Number(extra.amount) || 0)} ${details.currency}`
                                     : ""}
                                 </td>
@@ -281,46 +291,6 @@ const InvoiceTemplate = (data: InvoiceType) => {
                             </tr>
                           );
                         })}
-                        
-                        {/* Show merged VAT row for all extra deliverables */}
-                        {(() => {
-                          // Calculate total VAT from all extra deliverables that have showVat enabled
-                          let totalExtraVat = 0;
-                          let hasAnyVat = false;
-                          const vatPercentages: string[] = [];
-                          
-                          if (item.extraDeliverables && Array.isArray(item.extraDeliverables)) {
-                            item.extraDeliverables.forEach((extra) => {
-                              if (extra?.showVat && extra?.vat !== undefined && extra?.vat !== null && extra?.vat !== "" && Number(extra.vat) > 0) {
-                                totalExtraVat += Number(extra.vat) || 0;
-                                hasAnyVat = true;
-                                if (extra.vatPercentage) {
-                                  vatPercentages.push(`${extra.vatPercentage}%`);
-                                }
-                              }
-                            });
-                          }
-                          
-                          // Show single merged VAT row if there's any VAT
-                          if (hasAnyVat && totalExtraVat > 0) {
-                            return (
-                              <tr className="align-top">
-                                <td className="border border-gray-400 px-4 py-2 text-gray-700" colSpan={visibleColumnsCount - 1}>
-                                  <span className="font-medium">
-                                    {extraDeliverableColumnNames.vat}{vatPercentages.length > 0 ? ` = ${vatPercentages.join(', ')}` : ''}
-                                  </span>
-                                </td>
-                                {showAmount && showExtraDeliverableColumns.vat && (
-                                  <td className="border border-gray-400 px-4 py-2 text-right font-medium">
-                                    {formatNumberWithCommas(totalExtraVat)}{" "}
-                                    {details.currency}
-                                  </td>
-                                )}
-                              </tr>
-                            );
-                          }
-                          return null;
-                        })()}
                         {/* Legacy support for old single extraDeliverable structure */}
                         {item.extraDeliverableEnabled && !item.extraDeliverables && (
                           <>
@@ -364,21 +334,45 @@ const InvoiceTemplate = (data: InvoiceType) => {
                         )}
                       </>
                     )}
-                    {showVat && item.vat !== undefined && Number(item.vat) > 0 && (
-                      <tr className="align-top">
-                        <td className="border border-gray-400 px-4 py-2 text-gray-700" colSpan={visibleColumnsCount - 1}>
-                          <span className="font-medium">
-                            VAT{item.vatPercentage ? ` = ${item.vatPercentage}%` : ''}
-                          </span>
-                        </td>
-                        {showAmount && (
-                          <td className="border border-gray-400 px-4 py-2 text-right font-medium">
-                            {formatNumberWithCommas(Number(item.vat) || 0)}{" "}
-                            {details.currency}
-                          </td>
-                        )}
-                      </tr>
-                    )}
+                    {/* Show merged VAT row (main VAT + all extra deliverable VATs) */}
+                    {(() => {
+                      // Calculate main item VAT
+                      const mainVat = item.vat !== undefined && Number(item.vat) > 0 ? Number(item.vat) : 0;
+                      
+                      // Calculate total VAT from all extra deliverables that have showVat enabled
+                      let totalExtraVat = 0;
+                      
+                      if (item.extraDeliverables && Array.isArray(item.extraDeliverables)) {
+                        item.extraDeliverables.forEach((extra) => {
+                          if (extra?.showVat && extra?.vat !== undefined && extra?.vat !== null && extra?.vat !== "" && Number(extra.vat) > 0) {
+                            totalExtraVat += Number(extra.vat) || 0;
+                          }
+                        });
+                      }
+                      
+                      // Calculate merged VAT total
+                      const mergedVatTotal = mainVat + totalExtraVat;
+                      
+                      // Show single merged VAT row if there's any VAT (main or extra)
+                      if (mergedVatTotal > 0 || (showVat && mainVat > 0)) {
+                        return (
+                          <tr className="align-top">
+                            <td className="border border-gray-400 px-4 py-2 text-gray-700" colSpan={visibleColumnsCount - 1}>
+                              <span className="font-medium">
+                                VAT
+                              </span>
+                            </td>
+                            {showAmount && (
+                              <td className="border border-gray-400 px-4 py-2 text-right font-medium">
+                                {formatNumberWithCommas(mergedVatTotal)}{" "}
+                                {details.currency}
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      }
+                      return null;
+                    })()}
                   </React.Fragment>
                 ))
               )}
