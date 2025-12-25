@@ -56,7 +56,7 @@ const defaultInvoiceContext = {
   deleteInvoice: (index: number) => {},
   sendPdfToMail: (email: string): Promise<void> => Promise.resolve(),
   exportInvoiceAs: (exportAs: ExportTypes) => {},
-  importInvoice: (file: File) => {},
+  importInvoice: async (file: File) => {},
 };
 
 export const InvoiceContext = createContext(defaultInvoiceContext);
@@ -85,6 +85,7 @@ export const InvoiceContextProvider = ({
     sendPdfSuccess,
     sendPdfError,
     importInvoiceError,
+    importInvoiceSuccess,
     downloadSuccess,
   } = useToasts();
 
@@ -589,41 +590,182 @@ export const InvoiceContextProvider = ({
   };
 
   /**
-   * Import an invoice from a JSON file.
+   * Import an invoice from a JSON or Excel file.
    *
-   * @param {File} file - The JSON file to import.
+   * @param {File} file - The JSON or Excel file to import.
    */
-  const importInvoice = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const importedData = JSON.parse(event.target?.result as string);
+  const importInvoice = async (file: File) => {
+    const fileType = file.type;
+    const fileName = file.name.toLowerCase();
 
-        // Parse the dates
-        if (importedData.details) {
-          if (importedData.details.invoiceDate) {
-            importedData.details.invoiceDate = new Date(
-              importedData.details.invoiceDate
-            );
-          }
-          if (importedData.details.dueDate) {
-            importedData.details.dueDate = new Date(
-              importedData.details.dueDate
-            );
-          } else {
-            // Remove dueDate if it doesn't exist
-            delete importedData.details.dueDate;
-          }
+    // Handle JSON files
+    if (fileType === 'application/json' || fileName.endsWith('.json')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const importedData = JSON.parse(event.target?.result as string);
+          processImportedData(importedData);
+        } catch (error) {
+          console.error("Error parsing JSON file:", error);
+          importInvoiceError();
         }
+      };
+      reader.readAsText(file);
+      return;
+    }
 
-        // Reset form with imported data
-        reset(importedData);
+    // Handle Excel files
+    if (
+      fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+      fileType === 'application/vnd.ms-excel' ||
+      fileName.endsWith('.xlsx') ||
+      fileName.endsWith('.xls')
+    ) {
+      try {
+        // Dynamically import xlsx library (client-side)
+        const XLSX = (await import('xlsx')).default;
+        
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const data = new Uint8Array(event.target?.result as ArrayBuffer);
+            const workbook = XLSX.read(data, { type: 'array' });
+
+            // Try to read from hidden JSON sheet first (for complete data with logo/signature)
+            let importedData = null;
+            const jsonSheetName = workbook.SheetNames.find(name => name === '_JSON_DATA');
+            
+            if (jsonSheetName) {
+              const jsonSheet = workbook.Sheets[jsonSheetName];
+              const jsonData = XLSX.utils.sheet_to_json(jsonSheet, { header: 1, defval: '' });
+              
+              // The JSON is base64 encoded starting from the second row (index 1)
+              // It might be split across multiple rows
+              if (jsonData.length > 1) {
+                // Skip header row and concatenate all base64 chunks
+                let base64String = '';
+                const dataRows = jsonData.slice(1);
+                
+                for (let i = 0; i < dataRows.length; i++) {
+                  const row = dataRows[i];
+                  if (Array.isArray(row) && row.length > 0) {
+                    base64String += String(row[0] || '');
+                  } else if (typeof row === 'string') {
+                    base64String += row;
+                  }
+                }
+                
+                if (base64String && base64String.trim().length > 0) {
+                  try {
+                    // Decode base64 to get JSON string
+                    const jsonString = Buffer.from(base64String, 'base64').toString('utf8');
+                    importedData = JSON.parse(jsonString);
+                  } catch (parseError) {
+                    console.error("Error parsing base64 JSON from Excel:", parseError);
+                    // Fallback: try parsing as direct JSON if it looks like JSON
+                    try {
+                      const trimmed = base64String.trim();
+                      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+                        importedData = JSON.parse(trimmed);
+                      }
+                    } catch (fallbackError) {
+                      console.error("Error parsing JSON from Excel (fallback):", fallbackError);
+                    }
+                  }
+                }
+              }
+            }
+
+            // If no JSON sheet found, try to reconstruct from flattened data
+            if (!importedData) {
+              const mainSheetName = workbook.SheetNames[0];
+              const mainSheet = workbook.Sheets[mainSheetName];
+              const flattenedData = XLSX.utils.sheet_to_json(mainSheet);
+              
+              if (flattenedData.length > 0) {
+                // Try to reconstruct nested structure from flattened keys
+                // This is a fallback - may not preserve all nested structures perfectly
+                importedData = reconstructFromFlattened(flattenedData[0] as Record<string, any>);
+              }
+            }
+
+            if (importedData) {
+              processImportedData(importedData);
+            } else {
+              throw new Error('Could not extract invoice data from Excel file');
+            }
+          } catch (error) {
+            console.error("Error parsing Excel file:", error);
+            importInvoiceError();
+          }
+        };
+        reader.readAsArrayBuffer(file);
       } catch (error) {
-        console.error("Error parsing JSON file:", error);
+        console.error("Error loading Excel library:", error);
         importInvoiceError();
       }
-    };
-    reader.readAsText(file);
+      return;
+    }
+
+    // Unsupported file type
+    importInvoiceError();
+  };
+
+  /**
+   * Process imported invoice data and reset the form.
+   *
+   * @param {any} importedData - The imported invoice data.
+   */
+  const processImportedData = (importedData: any) => {
+    // Parse the dates
+    if (importedData.details) {
+      if (importedData.details.invoiceDate) {
+        importedData.details.invoiceDate = new Date(
+          importedData.details.invoiceDate
+        );
+      }
+      if (importedData.details.dueDate) {
+        importedData.details.dueDate = new Date(
+          importedData.details.dueDate
+        );
+      } else {
+        // Remove dueDate if it doesn't exist
+        delete importedData.details.dueDate;
+      }
+    }
+
+    // Reset form with imported data
+    reset(importedData);
+    
+    // Show success toast
+    importInvoiceSuccess();
+  };
+
+  /**
+   * Reconstruct nested object from flattened keys (e.g., "details.invoiceNumber" -> details: { invoiceNumber: ... })
+   * This is a fallback method when JSON sheet is not available.
+   *
+   * @param {Record<string, any>} flattened - The flattened object.
+   * @returns {any} The reconstructed nested object.
+   */
+  const reconstructFromFlattened = (flattened: Record<string, any>): any => {
+    const result: any = {};
+    
+    for (const [key, value] of Object.entries(flattened)) {
+      const keys = key.split('.');
+      let current = result;
+      
+      for (let i = 0; i < keys.length - 1; i++) {
+        if (!current[keys[i]]) {
+          current[keys[i]] = {};
+        }
+        current = current[keys[i]];
+      }
+      
+      current[keys[keys.length - 1]] = value;
+    }
+    
+    return result;
   };
 
 

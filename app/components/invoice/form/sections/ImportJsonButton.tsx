@@ -17,11 +17,24 @@ const ImportJsonButton = ({ setOpen }: ImportJsonButtonType) => {
         fileInputRef.current?.click();
     };
 
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (file && file.type === 'application/json') {
-            importInvoice(file);
-            setOpen(false);
+        if (file) {
+            const fileType = file.type;
+            const fileName = file.name.toLowerCase();
+            
+            // Accept both JSON and Excel files
+            if (
+                fileType === 'application/json' || 
+                fileName.endsWith('.json') ||
+                fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+                fileType === 'application/vnd.ms-excel' ||
+                fileName.endsWith('.xlsx') ||
+                fileName.endsWith('.xls')
+            ) {
+                await importInvoice(file);
+                setOpen(false);
+            }
         }
         // Reset input value to allow selecting the same file again
         if (fileInputRef.current) {
@@ -35,17 +48,17 @@ const ImportJsonButton = ({ setOpen }: ImportJsonButtonType) => {
                 type="file"
                 ref={fileInputRef}
                 onChange={handleFileChange}
-                accept=".json"
+                accept=".json,.xlsx,.xls"
                 style={{ display: 'none' }}
             />
             <BaseButton
                 variant="outline"
-                tooltipLabel="Import JSON invoice"
+                tooltipLabel="Import invoice (JSON or Excel)"
                 disabled={invoicePdfLoading}
                 onClick={handleClick}
             >
                 <Import />
-                Import JSON
+                Import Invoice
             </BaseButton>
         </>
     );

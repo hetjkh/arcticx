@@ -69,7 +69,15 @@ const useToasts = () => {
         toast({
             variant: "destructive",
             title: "Error",
-            description: "Something went importing the invoice. Make sure the file is a valid Invoify JSON export",
+            description: "Something went wrong importing the invoice. Make sure the file is a valid Invoify JSON or Excel export",
+        });
+    };
+
+    const importInvoiceSuccess = () => {
+        toast({
+            variant: "default",
+            title: "Invoice imported",
+            description: "Successfully imported invoice data including logo and signature",
         });
     };
 
@@ -91,6 +99,7 @@ const useToasts = () => {
         sendPdfSuccess,
         sendPdfError,
         importInvoiceError,
+        importInvoiceSuccess,
         downloadSuccess,
     };
 };
