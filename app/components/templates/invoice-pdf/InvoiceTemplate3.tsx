@@ -253,11 +253,11 @@ const InvoiceTemplate = (data: InvoiceType) => {
                           
                           // Show the row if it has any meaningful data
                           // Check for amount as number (not just truthy, since 0 is valid)
-                          const hasAmount = extra?.amount !== undefined && extra?.amount !== null && extra?.amount !== "";
+                          const hasAmount = extra?.amount !== undefined && extra?.amount !== null;
                           const hasName = extra?.name && extra.name.trim() !== "";
                           const hasRowName = extra?.rowName && extra.rowName.trim() !== "";
                           const hasServiceType = extra?.serviceType && extra.serviceType.trim() !== "";
-                          const hasVatPercentage = extra?.vatPercentage !== undefined && extra?.vatPercentage !== null && extra?.vatPercentage !== "";
+                          const hasVatPercentage = extra?.vatPercentage !== undefined && extra?.vatPercentage !== null;
                           const hasData = hasAmount || hasName || hasRowName || hasServiceType || hasVatPercentage;
                           
                           // Always show if there's any data, even if amount is 0
@@ -283,7 +283,7 @@ const InvoiceTemplate = (data: InvoiceType) => {
                               )}
                               {showAmount && (
                                 <td className="border border-gray-400 px-4 py-4 text-right font-medium">
-                                  {showColumns.amount && (extra.amount !== undefined && extra.amount !== null && extra.amount !== "")
+                                  {showColumns.amount && (extra.amount !== undefined && extra.amount !== null)
                                     ? `${formatNumberWithCommasNoDecimals(Number(extra.amount) || 0)} ${details.currency}`
                                     : ""}
                                 </td>
@@ -344,7 +344,7 @@ const InvoiceTemplate = (data: InvoiceType) => {
                       
                       if (item.extraDeliverables && Array.isArray(item.extraDeliverables)) {
                         item.extraDeliverables.forEach((extra) => {
-                          if (extra?.showVat && extra?.vat !== undefined && extra?.vat !== null && extra?.vat !== "" && Number(extra.vat) > 0) {
+                          if (extra?.showVat && extra?.vat !== undefined && extra?.vat !== null && Number(extra.vat) > 0) {
                             totalExtraVat += Number(extra.vat) || 0;
                           }
                         });

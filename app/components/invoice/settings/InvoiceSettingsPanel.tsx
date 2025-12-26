@@ -35,7 +35,7 @@ const InvoiceSettingsPanel = ({ isOpen, onClose }: InvoiceSettingsPanelProps) =>
         setExtraDeliverableColumnNames,
         setShowExtraDeliverableColumns,
         saveColumnNames,
-        columnNamesLoading,
+        loading,
     } = useColumnNames();
 
     // Watch column visibility toggles
@@ -57,7 +57,7 @@ const InvoiceSettingsPanel = ({ isOpen, onClose }: InvoiceSettingsPanelProps) =>
 
     // Sync column names when context updates
     useEffect(() => {
-        if (!columnNamesLoading) {
+        if (!loading) {
             setEditingColumnNames(columnNames);
             setEditingExtraDeliverableColumnNames(extraDeliverableColumnNames);
             setEditingShowExtraDeliverableColumns(showExtraDeliverableColumns);
@@ -65,7 +65,7 @@ const InvoiceSettingsPanel = ({ isOpen, onClose }: InvoiceSettingsPanelProps) =>
             setValue("details.extraDeliverableColumnNames", extraDeliverableColumnNames);
             setValue("details.showExtraDeliverableColumns", showExtraDeliverableColumns);
         }
-    }, [columnNames, extraDeliverableColumnNames, showExtraDeliverableColumns, columnNamesLoading, setValue]);
+    }, [columnNames, extraDeliverableColumnNames, showExtraDeliverableColumns, loading, setValue]);
 
     if (!isOpen) return null;
 
