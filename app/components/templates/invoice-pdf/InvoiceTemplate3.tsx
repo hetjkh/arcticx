@@ -353,8 +353,8 @@ const InvoiceTemplate = (data: InvoiceType) => {
                       // Calculate merged VAT total
                       const mergedVatTotal = mainVat + totalExtraVat;
                       
-                      // Show single merged VAT row if there's any VAT (main or extra)
-                      if (mergedVatTotal > 0 || (showVat && mainVat > 0)) {
+                      // Show single merged VAT row only if showVat toggle is ON and there's VAT to display
+                      if (showVat && mergedVatTotal > 0) {
                         return (
                           <tr className="align-top">
                             <td className="border border-gray-400 px-4 py-2 text-gray-700" colSpan={visibleColumnsCount - 1}>
