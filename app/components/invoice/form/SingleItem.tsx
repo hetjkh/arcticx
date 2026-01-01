@@ -184,6 +184,8 @@ const SingleItem = ({
             const vatValue = Number(vat) || 0;
             
             // Sum all extra deliverable amounts and VATs
+            // item.total should ALWAYS include everything (rate + VAT + extra amounts + extra VATs)
+            // The ChargesContext will handle subtracting VAT based on toggles
             let totalExtraAmount = 0;
             let totalExtraVat = 0;
             if (extraDeliverables && Array.isArray(extraDeliverables)) {
@@ -192,7 +194,7 @@ const SingleItem = ({
                     if (extra?.amount !== undefined && extra?.amount !== null && extra?.amount !== "") {
                         totalExtraAmount += Number(extra.amount) || 0;
                     }
-                    // Check if vat exists and is not empty
+                    // Include all VAT in item.total - ChargesContext will subtract based on toggles
                     if (extra?.vat !== undefined && extra?.vat !== null && extra?.vat !== "") {
                         totalExtraVat += Number(extra.vat) || 0;
                     }

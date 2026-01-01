@@ -191,10 +191,20 @@ export const ChargesContextProvider = ({ children }: ChargesContextProps) => {
                     const vatAmount = Number(item.vat) || 0;
                     itemTotal = itemTotal - vatAmount;
                 }
-                // If extraDeliverableShowVat is false for this item, subtract extra deliverable VAT
+                // If extraDeliverableShowVat is false for this item, subtract extra deliverable VAT (legacy)
                 if (item.extraDeliverableEnabled && !item.extraDeliverableShowVat) {
                     const extraVatAmount = Number(item.extraDeliverableVat) || 0;
                     itemTotal = itemTotal - extraVatAmount;
+                }
+                // Check new extraDeliverables array and subtract VAT where showVat is false
+                if (item.extraDeliverables && Array.isArray(item.extraDeliverables)) {
+                    item.extraDeliverables.forEach((extra) => {
+                        // If showVat is false for this extra deliverable, subtract its VAT
+                        if (extra?.showVat === false && extra?.vat !== undefined && extra?.vat !== null) {
+                            const extraVatAmount = Number(extra.vat) || 0;
+                            itemTotal = itemTotal - extraVatAmount;
+                        }
+                    });
                 }
                 return sum + itemTotal;
             },
