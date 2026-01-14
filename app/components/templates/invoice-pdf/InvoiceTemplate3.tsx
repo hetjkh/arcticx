@@ -119,7 +119,7 @@ const InvoiceTemplate = (data: InvoiceType) => {
                 <span className="font-bold text-gray-900 text-lg">{details.invoiceNumber}</span>
               </p>
               <p className="text-base">
-                <span className="font-bold text-gray-900">Issued:</span>{" "}
+                <span className="font-bold text-gray-900">Date:</span>{" "}
                 <span className="font-semibold text-gray-800">
                   {details.invoiceDate
                     ? new Date(details.invoiceDate).toLocaleDateString(
@@ -129,12 +129,6 @@ const InvoiceTemplate = (data: InvoiceType) => {
                     : "-"}
                 </span>
               </p>
-              {details.numberOfPassengers && (
-                <p className="text-base">
-                  <span className="font-bold text-gray-900">Total Passengers:</span>{" "}
-                  <span className="font-bold text-gray-900 text-lg">{details.numberOfPassengers}</span>
-                </p>
-              )}
             </div>
           </div>
         </div>
@@ -170,17 +164,17 @@ const InvoiceTemplate = (data: InvoiceType) => {
                   </th>
                 )}
                 {showAirlines && (
-                  <th className="border border-gray-400 px-4 py-3 text-left" style={{ width: '15%' }}>
+                  <th className="border border-gray-400 px-4 py-3 text-left" style={{ width: '18%' }}>
                     {columnNames.airlines}
                   </th>
                 )}
                 {showServiceType && (
-                  <th className="border border-gray-400 px-4 py-3 text-left" style={{ width: '15%' }}>
+                  <th className="border border-gray-400 px-4 py-3 text-left" style={{ width: '17%' }}>
                     {columnNames.serviceType}
                   </th>
                 )}
                 {showAmount && (
-                  <th className="border border-gray-400 px-4 py-3 text-right" style={{ width: '20%' }}>
+                  <th className="border border-gray-400 px-4 py-3 text-right" style={{ width: '15%' }}>
                     {columnNames.amount}
                   </th>
                 )}
@@ -231,7 +225,7 @@ const InvoiceTemplate = (data: InvoiceType) => {
                         </td>
                       )}
                       {showAmount && (
-                        <td className="border border-gray-400 px-4 py-4 text-right font-medium" style={{ minWidth: '120px' }}>
+                        <td className="border border-gray-400 px-4 py-4 text-right font-medium">
                           {formatNumberWithCommasNoDecimals(Number(item.unitPrice) || 0)}{" "}
                           {details.currency}
                         </td>
@@ -462,52 +456,65 @@ const InvoiceTemplate = (data: InvoiceType) => {
         </div>
 
         {/* Payment details and Signature */}
-        <div className="flex flex-wrap justify-between items-start mt-4 gap-8" style={{ pageBreakInside: 'avoid' }}>
-          {details.paymentInformation && (
-            <div className="rounded-lg border border-gray-300 p-2 text-sm text-gray-700 max-w-md">
-              <p className="uppercase text-xs font-semibold tracking-widest text-gray-500 mb-1">
-                Payment Instructions
-              </p>
-              <p className="mb-0.5">Bank: {details.paymentInformation.bankName}</p>
-              <p className="mb-0.5">Account Name: {details.paymentInformation.accountName}</p>
-              <p className="mb-0.5">Account Number: {details.paymentInformation.accountNumber}</p>
-              {details.paymentInformation.iban && (
-                <p className="mb-0.5">IBAN No: {details.paymentInformation.iban}</p>
-              )}
-              {details.paymentInformation.swiftCode && (
-                <p className="mb-0.5">SWIFT Code: {details.paymentInformation.swiftCode}</p>
-              )}
-            </div>
-          )}
+        <div className="mt-3">
+          <div className="flex justify-between items-start gap-3">
+            {details.paymentInformation && (
+              <div className="flex flex-col" style={{ maxWidth: '400px' }}>
+                <div className="rounded border border-gray-300 overflow-hidden">
+                  {(Array.isArray(details.paymentInformation) 
+                    ? details.paymentInformation.slice(0, 4) 
+                    : [details.paymentInformation]
+                  ).map((paymentInfo, index, array) => (
+                    <div key={index} className={index < array.length - 1 ? "border-b border-gray-300" : ""}>
+                      <div className="p-1.5 text-xs text-gray-700">
+                        <p className="uppercase text-[10px] font-semibold tracking-wider text-gray-500 mb-0.5">
+                          Payment Instructions{array.length > 1 ? ` ${index + 1}` : ''}
+                        </p>
+                        <p className="mb-0 leading-tight">Bank: {paymentInfo.bankName}</p>
+                        <p className="mb-0 leading-tight">Account Name: {paymentInfo.accountName}</p>
+                        <p className="mb-0 leading-tight">Account Number: {paymentInfo.accountNumber}</p>
+                        {paymentInfo.iban && (
+                          <p className="mb-0 leading-tight">IBAN No: {paymentInfo.iban}</p>
+                        )}
+                        {paymentInfo.swiftCode && (
+                          <p className="mb-0 leading-tight">SWIFT Code: {paymentInfo.swiftCode}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
-          {/* Signature */}
-          {details.signature?.data ? (
-            <div className="ml-auto">
-              <p className="text-sm font-semibold text-gray-700 uppercase tracking-widest mb-1">
-                Authorized Signature
-              </p>
-              {isImageUrl(details.signature.data) ? (
-                <img
-                  src={details.signature.data}
-                  width={120}
-                  height={60}
-                  alt={`Signature of ${sender.name}`}
-                />
-              ) : (
-                <p
-                  style={{
-                    fontSize: 24,
-                    fontWeight: 400,
-                    fontFamily: `${details.signature.fontFamily}, cursive`,
-                    margin: 0,
-                  }}
-                >
-                  {details.signature.data}
+            {/* Signature */}
+            {details.signature?.data && (
+              <div className="flex-shrink-0 ml-auto">
+                <p className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-0.5">
+                  Authorized Signature
                 </p>
-              )}
-              <p className="text-sm text-gray-600 mt-1">{sender.name}</p>
-            </div>
-          ) : null}
+                {isImageUrl(details.signature.data) ? (
+                  <img
+                    src={details.signature.data}
+                    width={100}
+                    height={50}
+                    alt={`Signature of ${sender.name}`}
+                  />
+                ) : (
+                  <p
+                    style={{
+                      fontSize: 20,
+                      fontWeight: 400,
+                      fontFamily: `${details.signature.fontFamily}, cursive`,
+                      margin: 0,
+                    }}
+                  >
+                    {details.signature.data}
+                  </p>
+                )}
+                <p className="text-xs text-gray-600 mt-0.5">{sender.name}</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </InvoiceLayout>

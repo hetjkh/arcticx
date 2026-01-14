@@ -179,7 +179,10 @@ const InvoiceDetailsSchema = z.object({
     language: fieldValidators.string,
     numberOfPassengers: fieldValidators.quantity.optional(),
     items: z.array(ItemSchema),
-    paymentInformation: PaymentInformationSchema.optional(),
+    paymentInformation: z.union([
+        PaymentInformationSchema,
+        z.array(PaymentInformationSchema).max(4)
+    ]).optional(),
     taxDetails: TaxDetailsSchema.optional(),
     discountDetails: DiscountDetailsSchema.optional(),
     shippingDetails: ShippingDetailsSchema.optional(),
