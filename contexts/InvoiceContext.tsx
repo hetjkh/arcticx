@@ -119,11 +119,18 @@ export const InvoiceContextProvider = ({
       } else {
         // Load from localStorage
         if (typeof window !== "undefined") {
-          const savedInvoicesJSON = window.localStorage.getItem("savedInvoices");
-          const savedInvoicesDefault = savedInvoicesJSON
-            ? JSON.parse(savedInvoicesJSON)
-            : [];
-          setSavedInvoices(savedInvoicesDefault);
+          try {
+            const savedInvoicesJSON = window.localStorage.getItem("savedInvoices");
+            const savedInvoicesDefault = savedInvoicesJSON
+              ? JSON.parse(savedInvoicesJSON)
+              : [];
+            setSavedInvoices(savedInvoicesDefault);
+          } catch (error) {
+            console.error("Error parsing saved invoices from localStorage:", error);
+            // Clear corrupted data
+            window.localStorage.removeItem("savedInvoices");
+            setSavedInvoices([]);
+          }
         }
       }
     };
@@ -402,10 +409,18 @@ export const InvoiceContextProvider = ({
           }
         } else {
           // Save to localStorage
-          const savedInvoicesJSON = localStorage.getItem("savedInvoices");
-          const savedInvoices = savedInvoicesJSON
-            ? JSON.parse(savedInvoicesJSON)
-            : [];
+          let savedInvoices: InvoiceType[] = [];
+          try {
+            const savedInvoicesJSON = localStorage.getItem("savedInvoices");
+            savedInvoices = savedInvoicesJSON
+              ? JSON.parse(savedInvoicesJSON)
+              : [];
+          } catch (error) {
+            console.error("Error parsing saved invoices from localStorage:", error);
+            // Clear corrupted data
+            localStorage.removeItem("savedInvoices");
+            savedInvoices = [];
+          }
 
           const existingInvoiceIndex = savedInvoices.findIndex(
             (invoice: InvoiceType) => {

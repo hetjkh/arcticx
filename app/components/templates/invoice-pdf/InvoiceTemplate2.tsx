@@ -289,30 +289,37 @@ const InvoiceTemplate2 = (data: InvoiceType) => {
                         </p>
                     </div>
                     <div className="my-2">
-                        <span className="font-semibold text-md text-gray-800">
-                            Please send the payment to this address
-                            <p className="text-sm">
-                                Bank: {details.paymentInformation?.bankName}
-                            </p>
-                            <p className="text-sm">
-                                Account name:{" "}
-                                {details.paymentInformation?.accountName}
-                            </p>
-                            <p className="text-sm">
-                                Account no:{" "}
-                                {details.paymentInformation?.accountNumber}
-                            </p>
-                            {details.paymentInformation?.iban && (
-                                <p className="text-sm">
-                                    IBAN No: {details.paymentInformation.iban}
-                                </p>
-                            )}
-                            {details.paymentInformation?.swiftCode && (
-                                <p className="text-sm">
-                                    SWIFT Code: {details.paymentInformation.swiftCode}
-                                </p>
-                            )}
-                        </span>
+                        {details.paymentInformation && (() => {
+                            const paymentInfo = Array.isArray(details.paymentInformation) 
+                                ? details.paymentInformation[0] 
+                                : details.paymentInformation;
+                            return paymentInfo ? (
+                                <span className="font-semibold text-md text-gray-800">
+                                    Please send the payment to this address
+                                    <p className="text-sm">
+                                        Bank: {paymentInfo.bankName}
+                                    </p>
+                                    <p className="text-sm">
+                                        Account name:{" "}
+                                        {paymentInfo.accountName}
+                                    </p>
+                                    <p className="text-sm">
+                                        Account no:{" "}
+                                        {paymentInfo.accountNumber}
+                                    </p>
+                                    {paymentInfo.iban && (
+                                        <p className="text-sm">
+                                            IBAN No: {paymentInfo.iban}
+                                        </p>
+                                    )}
+                                    {paymentInfo.swiftCode && (
+                                        <p className="text-sm">
+                                            SWIFT Code: {paymentInfo.swiftCode}
+                                        </p>
+                                    )}
+                                </span>
+                            ) : null;
+                        })()}
                     </div>
                 </div>
                 <p className="text-gray-500 text-sm">
