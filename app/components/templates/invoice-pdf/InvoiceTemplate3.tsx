@@ -133,9 +133,9 @@ const InvoiceTemplate = (data: InvoiceType) => {
           </div>
         </div>
 
-        {/* Billed To - Right Side */}
-        <div className="flex justify-end">
-          <div className="text-right space-y-2.5 min-w-[280px]">
+        {/* Billed To - Left Side */}
+        <div className="flex justify-start">
+          <div className="text-left space-y-2.5 min-w-[280px]">
             <p className="uppercase text-sm font-bold tracking-widest text-gray-900 border-b border-gray-400 pb-2">
               Billed To
             </p>
