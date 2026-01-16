@@ -163,6 +163,18 @@ export const InvoiceContextProvider = ({
               invoice.details.invoiceDate = new Date(invoice.details.invoiceDate);
             }
             
+            // Migrate phone from string to array for backward compatibility
+            if (invoice?.sender?.phone && typeof invoice.sender.phone === "string") {
+              invoice.sender.phone = invoice.sender.phone ? [invoice.sender.phone] : [""];
+            } else if (!invoice?.sender?.phone || !Array.isArray(invoice.sender.phone)) {
+              invoice.sender.phone = [""];
+            }
+            if (invoice?.receiver?.phone && typeof invoice.receiver.phone === "string") {
+              invoice.receiver.phone = invoice.receiver.phone ? [invoice.receiver.phone] : [""];
+            } else if (!invoice?.receiver?.phone || !Array.isArray(invoice.receiver.phone)) {
+              invoice.receiver.phone = [""];
+            }
+            
             // Reset form with invoice data
             reset(invoice);
             

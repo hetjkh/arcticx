@@ -97,9 +97,13 @@ const StatementTemplate = (data: StatementData) => {
                                 </p>
                             )}
                             {sender.phone && (
-                                <p>
-                                    <span className="font-semibold">Phone:</span> {sender.phone}
-                                </p>
+                                <>
+                                    {(Array.isArray(sender.phone) ? sender.phone : [sender.phone]).filter(phone => phone && phone.trim()).map((phone, index) => (
+                                        <p key={index}>
+                                            <span className="font-semibold">Phone{index > 0 ? ` ${index + 1}` : ''}:</span> {phone.trim()}
+                                        </p>
+                                    ))}
+                                </>
                             )}
                             {sender.customInputs && sender.customInputs.length > 0 && (
                                 <div className="mt-2 space-y-1">

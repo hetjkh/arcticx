@@ -105,7 +105,13 @@ const InvoiceTemplate = (data: InvoiceType) => {
                 {sender.city}, {sender.country}
               </p>
               <p>{sender.email}</p>
-              <p>{sender.phone}</p>
+              {sender.phone && (
+                <>
+                  {(Array.isArray(sender.phone) ? sender.phone : [sender.phone]).filter(phone => phone && phone.trim()).map((phone, index) => (
+                    <p key={index}>{phone.trim()}</p>
+                  ))}
+                </>
+              )}
             </div>
           </div>
 
@@ -144,7 +150,13 @@ const InvoiceTemplate = (data: InvoiceType) => {
               {receiver.city}, {receiver.country}
             </p>
             <p className="text-sm font-medium text-gray-800">{receiver.email}</p>
-            <p className="text-sm font-medium text-gray-800">{receiver.phone}</p>
+            {receiver.phone && (
+              <>
+                {(Array.isArray(receiver.phone) ? receiver.phone : [receiver.phone]).filter(phone => phone && phone.trim()).map((phone, index) => (
+                  <p key={index} className="text-sm font-medium text-gray-800">{phone.trim()}</p>
+                ))}
+              </>
+            )}
           </div>
         </div>
 

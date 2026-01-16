@@ -125,7 +125,7 @@ export const FORM_DEFAULT_VALUES = {
     city: "",
     country: "",
     email: "",
-    phone: "",
+    phone: [""],
     customInputs: [],
   },
   receiver: {
@@ -133,7 +133,7 @@ export const FORM_DEFAULT_VALUES = {
     city: "",
     country: "",
     email: "",
-    phone: "",
+    phone: [""],
     customInputs: [],
   },
   details: {
@@ -200,14 +200,14 @@ export const FORM_FILL_VALUES = {
     city: "Anytown",
     country: "USA",
     email: "johndoe@example.com",
-    phone: "123-456-7890",
+    phone: ["123-456-7890"],
   },
   receiver: {
     name: "Jane Smith",
     city: "Other Town",
     country: "Canada",
     email: "janesmith@example.com",
-    phone: "987-654-3210",
+    phone: ["987-654-3210"],
   },
   details: {
     invoiceLogo: "",

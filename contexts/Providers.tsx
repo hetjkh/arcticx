@@ -49,6 +49,17 @@ const readDraftFromLocalStorage = (): InvoiceType | null => {
         // Remove dueDate if it doesn't exist
         delete parsed.details.dueDate;
     }
+    // Migrate phone from string to array for backward compatibility
+    if (parsed?.sender?.phone && typeof parsed.sender.phone === "string") {
+      parsed.sender.phone = parsed.sender.phone ? [parsed.sender.phone] : [""];
+    } else if (!parsed?.sender?.phone || !Array.isArray(parsed.sender.phone)) {
+      parsed.sender.phone = [""];
+    }
+    if (parsed?.receiver?.phone && typeof parsed.receiver.phone === "string") {
+      parsed.receiver.phone = parsed.receiver.phone ? [parsed.receiver.phone] : [""];
+    } else if (!parsed?.receiver?.phone || !Array.isArray(parsed.receiver.phone)) {
+      parsed.receiver.phone = [""];
+    }
     return parsed;
   } catch {
     return null;

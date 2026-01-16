@@ -246,7 +246,13 @@ const InvoiceTemplate = (data: InvoiceType) => {
 				</p>
 				<div>
 					<p className='block text-sm font-medium text-gray-800'>{sender.email}</p>
-					<p className='block text-sm font-medium text-gray-800'>{sender.phone}</p>
+					{sender.phone && (
+						<>
+							{(Array.isArray(sender.phone) ? sender.phone : [sender.phone]).filter(phone => phone && phone.trim()).map((phone, index) => (
+								<p key={index} className='block text-sm font-medium text-gray-800'>{phone.trim()}</p>
+							))}
+						</>
+					)}
 				</div>
 			</div>
 

@@ -86,6 +86,17 @@ const SavedInvoicesList = ({ setModalState }: SavedInvoicesListProps) => {
     // Update fields when selected invoice is changed.
     // ? Reason: The fields don't go through validation when invoice loads
     const updateFields = (selected: any) => {
+        // Migrate phone from string to array for backward compatibility
+        if (selected?.sender?.phone && typeof selected.sender.phone === "string") {
+            selected.sender.phone = selected.sender.phone ? [selected.sender.phone] : [""];
+        } else if (!selected?.sender?.phone || !Array.isArray(selected.sender.phone)) {
+            selected.sender.phone = [""];
+        }
+        if (selected?.receiver?.phone && typeof selected.receiver.phone === "string") {
+            selected.receiver.phone = selected.receiver.phone ? [selected.receiver.phone] : [""];
+        } else if (!selected?.receiver?.phone || !Array.isArray(selected.receiver.phone)) {
+            selected.receiver.phone = [""];
+        }
         // Remove database-specific fields
         if (selected.id) {
             delete selected.id;
