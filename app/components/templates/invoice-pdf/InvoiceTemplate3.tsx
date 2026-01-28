@@ -2,6 +2,7 @@ import React from "react";
 
 // Components
 import { InvoiceLayout } from "@/app/components";
+import PaymentInstructionsSection from "./PaymentInstructionsSection";
 
 // Helpers
 import { formatNumberWithCommas, formatNumberWithCommasNoDecimals, isDataUrl, isImageUrl } from "@/lib/helpers";
@@ -467,67 +468,8 @@ const InvoiceTemplate = (data: InvoiceType) => {
           </div>
         </div>
 
-        {/* Payment details and Signature */}
-        <div className="mt-3">
-          <div className="flex justify-between items-start gap-3">
-            {details.paymentInformation && (
-              <div className="flex flex-col" style={{ maxWidth: '400px' }}>
-                <div className="rounded border border-gray-300 overflow-hidden">
-                  {(Array.isArray(details.paymentInformation) 
-                    ? details.paymentInformation.slice(0, 4) 
-                    : [details.paymentInformation]
-                  ).map((paymentInfo, index, array) => (
-                    <div key={index} className={index < array.length - 1 ? "border-b border-gray-300" : ""}>
-                      <div className="p-1.5 text-xs text-gray-700">
-                        <p className="uppercase text-[10px] font-semibold tracking-wider text-gray-500 mb-0.5">
-                          Payment Instructions{array.length > 1 ? ` ${index + 1}` : ''}
-                        </p>
-                        <p className="mb-0 leading-tight">Bank: {paymentInfo.bankName}</p>
-                        <p className="mb-0 leading-tight">Account Name: {paymentInfo.accountName}</p>
-                        <p className="mb-0 leading-tight">Account Number: {paymentInfo.accountNumber}</p>
-                        {paymentInfo.iban && (
-                          <p className="mb-0 leading-tight">IBAN No: {paymentInfo.iban}</p>
-                        )}
-                        {paymentInfo.swiftCode && (
-                          <p className="mb-0 leading-tight">SWIFT Code: {paymentInfo.swiftCode}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Signature */}
-            {details.signature?.data && (
-              <div className="flex-shrink-0 ml-auto">
-                <p className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-0.5">
-                  Authorized Signature
-                </p>
-                {isImageUrl(details.signature.data) ? (
-                  <img
-                    src={details.signature.data}
-                    width={100}
-                    height={50}
-                    alt={`Signature of ${sender.name}`}
-                  />
-                ) : (
-                  <p
-                    style={{
-                      fontSize: 20,
-                      fontWeight: 400,
-                      fontFamily: `${details.signature.fontFamily}, cursive`,
-                      margin: 0,
-                    }}
-                  >
-                    {details.signature.data}
-                  </p>
-                )}
-                <p className="text-xs text-gray-600 mt-0.5">{sender.name}</p>
-              </div>
-            )}
-          </div>
-        </div>
+        {/* Payment instructions + Receiver signature section (toggled) */}
+        <PaymentInstructionsSection data={data} />
       </div>
     </InvoiceLayout>
   );
