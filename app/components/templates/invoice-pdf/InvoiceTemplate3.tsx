@@ -6,6 +6,7 @@ import PaymentInstructionsSection from "./PaymentInstructionsSection";
 
 // Helpers
 import { formatNumberWithCommas, formatNumberWithCommasNoDecimals, isDataUrl, isImageUrl } from "@/lib/helpers";
+import { resolveInvoiceLogo } from "@/lib/branding";
 import { DATE_OPTIONS } from "@/lib/variables";
 
 // Types
@@ -13,6 +14,7 @@ import { InvoiceType } from "@/types";
 
 const InvoiceTemplate = (data: InvoiceType) => {
   const { sender, receiver, details } = data;
+  const logoSrc = resolveInvoiceLogo(details.invoiceLogo);
 
   const itinerary = details.items || [];
   const showVat = details.showVat || false;
@@ -90,9 +92,9 @@ const InvoiceTemplate = (data: InvoiceType) => {
         {/* Header */}
         <div className="flex flex-wrap justify-between items-start gap-6">
           <div className="max-w-xs space-y-2">
-            {details.invoiceLogo && (
+            {logoSrc && (
               <img
-                src={details.invoiceLogo}
+                src={logoSrc}
                 width={120}
                 height={68}
                 alt={`Logo of ${sender.name}`}

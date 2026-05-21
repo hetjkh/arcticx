@@ -1,6 +1,7 @@
 import React from "react";
 import { InvoiceType } from "@/types";
 import { formatNumberWithCommas, isImageUrl, isDataUrl } from "@/lib/helpers";
+import { resolveInvoiceLogo, resolveInvoiceSignature } from "@/lib/branding";
 import { DATE_OPTIONS } from "@/lib/variables";
 
 type StatementData = {
@@ -48,6 +49,8 @@ const StatementTemplate = (data: StatementData) => {
     const sender = firstInvoice?.sender || { name: "", city: "", country: "", email: "", phone: "" };
     const details = firstInvoice?.details || {};
     const receiver = firstInvoice?.receiver || { name: "", city: "", country: "", email: "", phone: "" };
+    const logoSrc = resolveInvoiceLogo(details.invoiceLogo);
+    const signatureSrc = resolveInvoiceSignature(details.signature?.data);
 
     // Get signature font if available
     const fontHref = details.signature?.fontFamily
@@ -73,9 +76,9 @@ const StatementTemplate = (data: StatementData) => {
                 {/* Header with Logo and Company Details */}
                 <div className="flex flex-wrap justify-between items-start gap-6 mb-8 border-b border-gray-300 pb-6">
                     <div className="flex-1 min-w-[300px] space-y-3">
-                        {details.invoiceLogo && (
+                        {logoSrc && (
                             <img
-                                src={details.invoiceLogo}
+                                src={logoSrc}
                                 width={140}
                                 height={100}
                                 alt={`Logo of ${sender.name}`}
@@ -274,34 +277,18 @@ const StatementTemplate = (data: StatementData) => {
                         </div>
 
                         {/* Authorized Signature */}
-                        {details.signature?.data && (
+                        {signatureSrc && (
                             <div className="text-right">
                                 <p className="text-sm font-semibold text-gray-700 uppercase tracking-widest mb-2">
                                     Authorized Signature 
                                 </p>
-                                {isImageUrl(details.signature.data) ? (
-                                    <img
-                                        src={details.signature.data}
-                                        width={140}
-                                        height={70}
-                                        alt={`Signature of ${sender.name}`}
-                                        className="border border-gray-300 rounded"
-                                    />
-                                ) : (
-                                    <div className="border border-gray-300 rounded p-2 bg-white min-w-[140px]">
-                                        <p
-                                            style={{
-                                                fontSize: 28,
-                                                fontWeight: 400,
-                                                fontFamily: `${details.signature.fontFamily || "Dancing Script"}, cursive`,
-                                                margin: 0,
-                                                textAlign: "center",
-                                            }}
-                                        >
-                                            {details.signature.data}
-                                        </p>
-                                    </div>
-                                )}
+                                <img
+                                    src={signatureSrc}
+                                    width={140}
+                                    height={70}
+                                    alt={`Signature of ${sender.name}`}
+                                    className="border border-gray-300 rounded"
+                                />
                                 <p className="text-sm text-gray-600 mt-2 font-medium">{sender.name}</p>
                             </div>
                         )}

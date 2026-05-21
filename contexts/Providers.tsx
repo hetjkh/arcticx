@@ -25,6 +25,8 @@ import { InvoiceType } from "@/types";
 
 // Variables
 import {
+  DEFAULT_INVOICE_LOGO,
+  DEFAULT_INVOICE_SIGNATURE,
   FORM_DEFAULT_VALUES,
   LOCAL_STORAGE_INVOICE_DRAFT_KEY,
 } from "@/lib/variables";
@@ -86,16 +88,8 @@ const Providers = ({ children }: ProvidersProps) => {
         sender: FORM_DEFAULT_VALUES.sender,
         details: {
           ...draft.details,
-          // Clear old default logo URLs if they exist
-          invoiceLogo: (draft.details?.invoiceLogo && draft.details.invoiceLogo.trim() !== "" && 
-            !draft.details.invoiceLogo.includes("res.cloudinary.com")) 
-            ? draft.details.invoiceLogo 
-            : "",
-          // Clear old default signature URLs if they exist
-          signature: (draft.details?.signature?.data && draft.details.signature.data.trim() !== "" && 
-            !draft.details.signature.data.includes("res.cloudinary.com"))
-            ? draft.details.signature
-            : { data: "" },
+          invoiceLogo: DEFAULT_INVOICE_LOGO,
+          signature: { data: DEFAULT_INVOICE_SIGNATURE },
           // Auto-generate invoice number if empty (use current number, don't increment)
           invoiceNumber: (draft.details?.invoiceNumber && draft.details.invoiceNumber.trim() !== "")
             ? draft.details.invoiceNumber

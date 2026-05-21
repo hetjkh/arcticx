@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { StatementDocument } from "@/models/Statement";
+import { applyInvoiceBranding } from "@/lib/branding";
 import { InvoiceType } from "@/types";
 import { ObjectId } from "mongodb";
 
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
             clientEmail: clientEmail,
             title: statementData.title || "STATEMENT",
             billedToName: statementData.billedToName,
-            invoices: statementData.invoices,
+            invoices: statementData.invoices.map(applyInvoiceBranding),
             createdAt: now,
             updatedAt: now,
         };

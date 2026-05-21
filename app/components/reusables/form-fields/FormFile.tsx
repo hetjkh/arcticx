@@ -56,32 +56,8 @@ const FormFile = ({ name, label, placeholder }: FormFileProps) => {
                     const base64String = event.target!.result as string;
                     setBase64Image(base64String);
                     
-                    // Upload to Cloudinary
-                    try {
-                        const response = await fetch("/api/upload/cloudinary", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                                base64String,
-                                folder: "invoify/logos",
-                            }),
-                        });
-
-                        if (response.ok) {
-                            const data = await response.json();
-                            setBase64Image(data.url);
-                            setValue(name, data.url); // Set Cloudinary URL
-                        } else {
-                            // Fallback to base64 if upload fails
-                            setValue(name, base64String);
-                        }
-                    } catch (error) {
-                        console.error("Upload error:", error);
-                        // Fallback to base64 if upload fails
-                        setValue(name, base64String);
-                    } finally {
-                        setUploading(false);
-                    }
+                    setValue(name, base64String);
+                    setUploading(false);
                 };
                 reader.readAsDataURL(file);
             } catch (error) {

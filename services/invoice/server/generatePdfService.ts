@@ -5,6 +5,7 @@ import chromium from "@sparticuz/chromium";
 
 // Helpers
 import { getInvoiceTemplate } from "@/lib/helpers";
+import { embedBrandingForPdf } from "@/lib/branding.server";
 
 // Variables
 import { ENV, TAILWIND_CDN } from "@/lib/variables";
@@ -21,7 +22,8 @@ import { InvoiceType } from "@/types";
  * @returns {Promise<NextResponse>} A promise that resolves to a NextResponse object containing the generated PDF.
  */
 export async function generatePdfService(req: NextRequest) {
-    const body: InvoiceType = await req.json();
+    const rawBody: InvoiceType = await req.json();
+    const body = await embedBrandingForPdf(rawBody);
     let browser;
     let page;
 

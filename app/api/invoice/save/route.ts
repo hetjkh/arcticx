@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { InvoiceDocument } from "@/models/Invoice";
+import { applyInvoiceBranding } from "@/lib/branding";
 import { InvoiceType } from "@/types";
 import { ObjectId } from "mongodb";
 
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const invoiceData: InvoiceType = await req.json();
+        const invoiceData: InvoiceType = applyInvoiceBranding(await req.json());
 
         const db = await getDb();
         const invoicesCollection = db.collection<InvoiceDocument>("invoices");

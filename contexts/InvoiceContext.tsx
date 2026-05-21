@@ -27,6 +27,8 @@ import { saveFileToDirectory } from "@/services/invoice/client/downloadToDirecto
 
 // Variables
 import {
+  DEFAULT_INVOICE_LOGO,
+  DEFAULT_INVOICE_SIGNATURE,
   FORM_DEFAULT_VALUES,
   GENERATE_PDF_API,
   SEND_PDF_API,
@@ -36,6 +38,7 @@ import {
 
 // Helpers
 import { getNextInvoiceNumber } from "@/lib/helpers";
+import { applyInvoiceBranding } from "@/lib/branding";
 
 // Types
 import { ExportTypes, InvoiceType } from "@/types";
@@ -175,8 +178,8 @@ export const InvoiceContextProvider = ({
               invoice.receiver.phone = [""];
             }
             
-            // Reset form with invoice data
-            reset(invoice);
+            // Reset form with invoice data (always default branding)
+            reset(applyInvoiceBranding(invoice));
             
             // Remove query parameter from URL
             const url = new URL(window.location.href);
@@ -192,6 +195,12 @@ export const InvoiceContextProvider = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, user]);
+
+  // Always use fixed company logo and signature
+  useEffect(() => {
+    setValue("details.invoiceLogo", DEFAULT_INVOICE_LOGO);
+    setValue("details.signature.data", DEFAULT_INVOICE_SIGNATURE);
+  }, [setValue]);
 
   // Persist full form state with debounce
   useEffect(() => {
@@ -221,11 +230,7 @@ export const InvoiceContextProvider = ({
    * @param {InvoiceType} data - The form values used to generate the PDF.
    */
   const onFormSubmit = (data: InvoiceType) => {
-    console.log("VALUE");
-    console.log(data);
-
-    // Call generate pdf method
-    generatePdf(data);
+    generatePdf(applyInvoiceBranding(data));
   };
 
   /**
@@ -363,7 +368,7 @@ export const InvoiceContextProvider = ({
     if (invoicePdf) {
       // If get values function is provided, allow to save the invoice
       if (getValues) {
-        const formValues = getValues();
+        const formValues = applyInvoiceBranding(getValues());
         const updatedDate = new Date().toLocaleDateString(
           "en-US",
           SHORT_DATE_OPTIONS
@@ -610,10 +615,7 @@ export const InvoiceContextProvider = ({
    * @param {ExportTypes} exportAs - The format in which to export the invoice.
    */
   const exportInvoiceAs = (exportAs: ExportTypes) => {
-    const formValues = getValues();
-
-    // Service to export invoice with given parameters
-    exportInvoice(exportAs, formValues);
+    exportInvoice(exportAs, applyInvoiceBranding(getValues()));
   };
 
   /**
@@ -761,8 +763,7 @@ export const InvoiceContextProvider = ({
       }
     }
 
-    // Reset form with imported data
-    reset(importedData);
+    reset(applyInvoiceBranding(importedData));
     
     // Show success toast
     importInvoiceSuccess();

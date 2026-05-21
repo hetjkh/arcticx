@@ -6,6 +6,10 @@ import chromium from "@sparticuz/chromium";
 // Components
 import StatementTemplate from "@/app/components/templates/invoice-pdf/StatementTemplate";
 
+// Branding
+import { applyInvoiceBranding } from "@/lib/branding";
+import { embedBrandingForPdf } from "@/lib/branding.server";
+
 // Variables
 import { ENV, TAILWIND_CDN } from "@/lib/variables";
 
@@ -28,7 +32,11 @@ type StatementRequest = {
  */
 export async function generateStatementService(req: NextRequest) {
     const body: StatementRequest = await req.json();
-    const { invoices, title, billedToName } = body;
+    const brandedInvoices = await Promise.all(
+        (body.invoices || []).map((inv) => embedBrandingForPdf(applyInvoiceBranding(inv)))
+    );
+    const { title, billedToName } = body;
+    const invoices = brandedInvoices;
     let browser;
     let page;
 

@@ -12,6 +12,8 @@ import ExcelJS from "exceljs";
 
 // Helpers
 import { flattenObject, formatNumberWithCommas, formatNumberWithCommasNoDecimals, isImageUrl, isDataUrl } from "@/lib/helpers";
+import { applyInvoiceBranding } from "@/lib/branding";
+import { embedBrandingForPdf } from "@/lib/branding.server";
 import { DATE_OPTIONS } from "@/lib/variables";
 
 // Types
@@ -24,8 +26,12 @@ import { ExportTypes } from "@/types";
  * @returns {NextResponse} A response object containing the exported data in the requested format.
  */
 export async function exportInvoiceService(req: NextRequest) {
-    const body = await req.json();
+    const rawBody = await req.json();
     const format = req.nextUrl.searchParams.get("format");
+    const body =
+        format === ExportTypes.XLSX
+            ? await embedBrandingForPdf(applyInvoiceBranding(rawBody))
+            : applyInvoiceBranding(rawBody);
 
     try {
         switch (format) {

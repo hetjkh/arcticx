@@ -117,6 +117,12 @@ export const SHORT_DATE_OPTIONS: Intl.DateTimeFormatOptions = {
 };
 
 /**
+ * Default invoice branding (public/assets)
+ */
+export const DEFAULT_INVOICE_LOGO = "/assets/logo.png";
+export const DEFAULT_INVOICE_SIGNATURE = "/assets/SIGN.png";
+
+/**
  * Form defaults
  */
 export const FORM_DEFAULT_VALUES = {
@@ -137,7 +143,7 @@ export const FORM_DEFAULT_VALUES = {
     customInputs: [],
   },
   details: {
-    invoiceLogo: "",
+    invoiceLogo: DEFAULT_INVOICE_LOGO,
     invoiceNumber: "",
     invoiceDate: "",
     numberOfPassengers: 1,
@@ -185,7 +191,7 @@ export const FORM_DEFAULT_VALUES = {
     showServiceType: true,
     showAmount: true,
     signature: {
-      data: "",
+      data: DEFAULT_INVOICE_SIGNATURE,
     },
   },
 };
@@ -210,7 +216,7 @@ export const FORM_FILL_VALUES = {
     phone: ["987-654-3210"],
   },
   details: {
-    invoiceLogo: "",
+    invoiceLogo: DEFAULT_INVOICE_LOGO,
     invoiceNumber: "INV0001",
     invoiceDate: new Date(),
     dueDate: new Date(),
@@ -262,7 +268,7 @@ export const FORM_FILL_VALUES = {
     additionalNotes: "Thank you for your business",
     paymentTerms: "Net 30",
     signature: {
-      data: "",
+      data: DEFAULT_INVOICE_SIGNATURE,
     },
     subTotal: "850",
     totalAmount: "850",

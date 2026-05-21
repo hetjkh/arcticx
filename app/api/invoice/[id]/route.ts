@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { InvoiceDocument } from "@/models/Invoice";
+import { applyInvoiceBranding } from "@/lib/branding";
 import { ObjectId } from "mongodb";
 
 export async function GET(
@@ -47,10 +48,10 @@ export async function GET(
 
         return NextResponse.json(
             {
-                invoice: {
+                invoice: applyInvoiceBranding({
                     ...invoiceData,
                     id: _id!.toString(),
-                },
+                }),
             },
             { status: 200 }
         );

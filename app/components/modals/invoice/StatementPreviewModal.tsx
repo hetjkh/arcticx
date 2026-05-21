@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { InvoiceType } from "@/types";
+import { applyInvoiceBranding } from "@/lib/branding";
 import { formatNumberWithCommas } from "@/lib/helpers";
 import { DATE_OPTIONS } from "@/lib/variables";
 
@@ -144,7 +145,7 @@ const StatementPreviewModal = ({
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({ 
-                    invoices,
+                    invoices: invoices.map(applyInvoiceBranding),
                     billedToName: billedToName.trim() || undefined,
                 }),
             });
@@ -189,7 +190,7 @@ const StatementPreviewModal = ({
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    invoices,
+                    invoices: invoices.map(applyInvoiceBranding),
                     title: "STATEMENT",
                     clientId: selectedClientId,
                     clientEmail: selectedClientEmail,

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { InvoiceDocument } from "@/models/Invoice";
+import { InvoiceType } from "@/types";
+import { applyInvoiceBranding } from "@/lib/branding";
 import { SHORT_DATE_OPTIONS } from "@/lib/variables";
 import { ObjectId } from "mongodb";
 
@@ -32,13 +34,16 @@ export async function GET(req: NextRequest) {
                 ? new Date(updatedAt).toLocaleDateString("en-US", SHORT_DATE_OPTIONS)
                 : new Date().toLocaleDateString("en-US", SHORT_DATE_OPTIONS);
             
-            return {
+            const branded = applyInvoiceBranding({
                 ...invoiceData,
-                id: _id!.toString(),
                 details: {
                     ...invoiceData.details,
                     updatedAt: updatedAtString,
                 },
+            } as InvoiceType);
+            return {
+                ...branded,
+                id: _id!.toString(),
             };
         });
 

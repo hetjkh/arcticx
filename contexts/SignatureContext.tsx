@@ -185,25 +185,7 @@ export const SignatureContextProvider = ({
                 const base64String = event.target!.result as string;
                 setUploadSignatureImg(base64String);
                 
-                // Upload to Cloudinary
-                try {
-                    const response = await fetch("/api/upload/cloudinary", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            base64String,
-                            folder: "invoify/signatures",
-                        }),
-                    });
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        setUploadSignatureImg(data.url);
-                    }
-                } catch (error) {
-                    console.error("Upload error:", error);
-                    // Keep base64 as fallback
-                }
+                setValue("details.signature.data", base64String);
             };
             reader.readAsDataURL(file);
         }

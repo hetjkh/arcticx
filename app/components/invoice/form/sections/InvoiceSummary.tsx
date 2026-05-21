@@ -11,14 +11,15 @@ import { Switch } from "@/components/ui/switch";
 import {
     Charges,
     FormTextarea,
-    SignatureModal,
     Subheading,
 } from "@/app/components";
 import DocumentsSection from "./DocumentsSection";
 
 // Contexts
 import { useTranslationContext } from "@/contexts/TranslationContext";
-import { SignatureContextProvider } from "@/contexts/SignatureContext";
+
+// Variables
+import { DEFAULT_INVOICE_SIGNATURE } from "@/lib/variables";
 
 // Types
 import { InvoiceType } from "@/types";
@@ -33,10 +34,18 @@ const InvoiceSummary = () => {
             <Subheading>{_t("form.steps.summary.heading")}:</Subheading>
             <div className="flex flex-wrap gap-x-5 gap-y-10">
                 <div className="flex flex-col gap-3">
-                    <SignatureContextProvider>
-                        {/* Signature dialog */}
-                        <SignatureModal />
-                    </SignatureContextProvider>
+                    <div className="flex flex-col gap-2">
+                        <p className="text-sm font-medium">Signature:</p>
+                        <img
+                            src={DEFAULT_INVOICE_SIGNATURE}
+                            alt="Authorized signature"
+                            style={{
+                                objectFit: "contain",
+                                maxWidth: "12rem",
+                                maxHeight: "5rem",
+                            }}
+                        />
+                    </div>
 
                     {/* Additional notes & Payment terms */}
                     <FormTextarea

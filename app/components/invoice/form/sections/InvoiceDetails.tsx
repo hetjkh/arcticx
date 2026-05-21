@@ -5,12 +5,14 @@ import {
     CurrencySelector,
     DatePickerFormField,
     FormInput,
-    FormFile,
     Subheading,
 } from "@/app/components";
 
 // Contexts
 import { useTranslationContext } from "@/contexts/TranslationContext";
+
+// Variables
+import { DEFAULT_INVOICE_LOGO } from "@/lib/variables";
 
 const InvoiceDetails = () => {
     const { _t } = useTranslationContext();
@@ -21,15 +23,20 @@ const InvoiceDetails = () => {
 
             <div className="flex flex-row flex-wrap gap-5">
                 <div className="flex flex-col gap-2">
-                    <FormFile
-                        name="details.invoiceLogo"
-                        label={_t(
-                            "form.steps.invoiceDetails.invoiceLogo.label"
-                        )}
-                        placeholder={_t(
-                            "form.steps.invoiceDetails.invoiceLogo.placeholder"
-                        )}
-                    />
+                    <div className="flex flex-col gap-2">
+                        <p className="text-sm font-medium">
+                            {_t("form.steps.invoiceDetails.invoiceLogo.label")}:
+                        </p>
+                        <img
+                            src={DEFAULT_INVOICE_LOGO}
+                            alt="Company logo"
+                            style={{
+                                objectFit: "contain",
+                                width: "10rem",
+                                height: "7rem",
+                            }}
+                        />
+                    </div>
 
                     <FormInput
                         name="details.invoiceNumber"
