@@ -6,10 +6,10 @@ import { useInvoiceContext } from '@/contexts/InvoiceContext';
 import { Import } from 'lucide-react';
 
 type ImportJsonButtonType = {
-    setOpen: (open: boolean) => void;
+    onSuccess?: () => void;
 }
 
-const ImportJsonButton = ({ setOpen }: ImportJsonButtonType) => {
+const ImportJsonButton = ({ onSuccess }: ImportJsonButtonType) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { importInvoice, invoicePdfLoading } = useInvoiceContext();
 
@@ -33,7 +33,7 @@ const ImportJsonButton = ({ setOpen }: ImportJsonButtonType) => {
                 fileName.endsWith('.xls')
             ) {
                 await importInvoice(file);
-                setOpen(false);
+                onSuccess?.();
             }
         }
         // Reset input value to allow selecting the same file again

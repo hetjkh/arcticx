@@ -83,6 +83,7 @@
         "title": "Actions",
         "description": "Operations and preview",
         "loadInvoice": "Load Invoice",
+        "loadStatement": "Load Statements",
         "exportInvoice": "Export Invoice",
         "newInvoice": "New Invoice",
         "generatePdf": "Generate PDF",

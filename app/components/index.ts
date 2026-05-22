@@ -8,6 +8,8 @@ import BaseFooter from "./layout/BaseFooter";
    * Invoice
    ========================= */
 import InvoiceMain from "./invoice/InvoiceMain";
+import SavedStatementsList from "./invoice/SavedStatementsList";
+import SavedStatementsPage from "./invoice/SavedStatementsPage";
 import InvoiceForm from "./invoice/InvoiceForm";
 import InvoiceActions from "./invoice/InvoiceActions";
 
@@ -61,7 +63,6 @@ import Subheading from "./reusables/Subheading";
 import SendPdfToEmailModal from "./modals/email/SendPdfToEmailModal";
 
 // Import/Export
-import InvoiceLoaderModal from "./modals/invoice/InvoiceLoaderModal";
 import InvoiceExportModal from "./modals/invoice/InvoiceExportModal";
 import DownloadSettingsModal from "./modals/invoice/DownloadSettingsModal";
 import SavedPaymentInfoModal from "./modals/invoice/SavedPaymentInfoModal";
@@ -120,6 +121,8 @@ export {
     InvoiceMain,
     InvoiceForm,
     InvoiceActions,
+    SavedStatementsList,
+    SavedStatementsPage,
     BillFromSection,
     BillToSection,
     InvoiceDetails,
@@ -150,7 +153,6 @@ export {
     LanguageSelector,
     Subheading,
     SendPdfToEmailModal,
-    InvoiceLoaderModal,
     InvoiceExportModal,
     DownloadSettingsModal,
     SavedPaymentInfoModal,

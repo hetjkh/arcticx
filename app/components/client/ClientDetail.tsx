@@ -25,6 +25,9 @@ import {
 // Components
 import { BaseButton } from "@/app/components";
 
+// Variables
+import { SHORT_DATE_OPTIONS } from "@/lib/variables";
+
 // Icons
 import { Mail, Phone, MapPin, FileText, Edit, ArrowLeft, Plus, X } from "lucide-react";
 
@@ -323,7 +326,11 @@ const ClientDetail = ({ clientId }: ClientDetailProps) => {
                                         <TableCell className="font-medium">
                                             #{invoice.details.invoiceNumber}
                                         </TableCell>
-                                        <TableCell>{invoice.details.invoiceDate}</TableCell>
+                                        <TableCell>
+                                            {invoice.details.invoiceDate
+                                                ? new Date(invoice.details.invoiceDate).toLocaleDateString("en-US", SHORT_DATE_OPTIONS)
+                                                : "N/A"}
+                                        </TableCell>
                                         <TableCell>
                                             {formatCurrency(
                                                 invoice.details.totalAmount,
@@ -375,21 +382,35 @@ const ClientDetail = ({ clientId }: ClientDetailProps) => {
                             </TableHeader>
                             <TableBody>
                                 {statements.map((statement) => {
-                                    const totalAmount = statement.invoices.reduce(
-                                        (sum, inv) => sum + (Number(inv.details?.totalAmount) || 0),
-                                        0
-                                    );
-                                    const currency = statement.invoices[0]?.details?.currency || "USD";
-                                    
+                                    const invoiceCount =
+                                        (statement as { invoiceCount?: number }).invoiceCount ??
+                                        statement.invoices?.length ??
+                                        0;
+                                    const totalAmount =
+                                        (statement as { totalAmount?: number }).totalAmount ??
+                                        statement.invoices?.reduce(
+                                            (sum, inv) => sum + (Number(inv.details?.totalAmount) || 0),
+                                            0
+                                        ) ??
+                                        0;
+                                    const currency =
+                                        (statement as { currency?: string }).currency ||
+                                        statement.invoices?.[0]?.details?.currency ||
+                                        "USD";
+
                                     return (
                                         <TableRow key={statement.id}>
                                             <TableCell className="font-medium">
                                                 {statement.title || "STATEMENT"}
                                             </TableCell>
                                             <TableCell>
-                                                {statement.invoices.length} invoice{statement.invoices.length !== 1 ? 's' : ''} - {formatCurrency(totalAmount, currency)}
+                                                {invoiceCount} invoice{invoiceCount !== 1 ? "s" : ""} - {formatCurrency(totalAmount, currency)}
                                             </TableCell>
-                                            <TableCell>{statement.createdAt}</TableCell>
+                                            <TableCell>
+                                                {statement.createdAt
+                                                    ? new Date(statement.createdAt).toLocaleDateString("en-US", SHORT_DATE_OPTIONS)
+                                                    : "N/A"}
+                                            </TableCell>
                                             <TableCell>
                                                 <div className="flex gap-2">
                                                     <Button

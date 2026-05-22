@@ -13,11 +13,13 @@ import {
   PdfViewer,
   BaseButton,
   NewInvoiceAlert,
-  InvoiceLoaderModal,
   InvoiceExportModal,
   DownloadSettingsModal,
   DefaultPresetsModal,
 } from "@/app/components";
+
+// Navigation
+import { Link } from "@/i18n/navigation";
 
 // Contexts
 import { useInvoiceContext } from "@/contexts/InvoiceContext";
@@ -25,7 +27,7 @@ import { useTranslationContext } from "@/contexts/TranslationContext";
 import { useAuth } from "@/contexts/AuthContext";
 
 // Icons
-import { FileInput, FolderUp, Import, Plus, RotateCcw, Settings } from "lucide-react";
+import { FileInput, FolderUp, Import, Plus, Receipt, RotateCcw, Settings } from "lucide-react";
 
 const InvoiceActions = () => {
   const { invoicePdfLoading, newInvoice } = useInvoiceContext();
@@ -42,17 +44,30 @@ const InvoiceActions = () => {
 
         <div className="flex flex-col flex-wrap items-center gap-2">
           <div className="flex flex-wrap gap-3">
-            {/* Load modal button */}
-            <InvoiceLoaderModal>
+            {/* Load invoice page */}
+            <Link href="/invoices">
               <BaseButton
                 variant="outline"
-                tooltipLabel="Open load invoice menu"
+                tooltipLabel="Open saved invoices"
                 disabled={invoicePdfLoading}
               >
                 <FolderUp />
                 {_t("actions.loadInvoice")}
               </BaseButton>
-            </InvoiceLoaderModal>
+            </Link>
+
+            {user && (
+              <Link href="/statements">
+                <BaseButton
+                  variant="outline"
+                  tooltipLabel="Open saved statements"
+                  disabled={invoicePdfLoading}
+                >
+                  <Receipt />
+                  {_t("actions.loadStatement")}
+                </BaseButton>
+              </Link>
+            )}
 
             {/* Export modal button */}
             <InvoiceExportModal>

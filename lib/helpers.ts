@@ -293,6 +293,94 @@ const fileToBuffer = async (file: File) => {
     return pdfBuffer;
 };
 
+const parseInvoiceDate = (dateValue: Date | string | undefined | null): Date => {
+    if (!dateValue) {
+        return new Date();
+    }
+
+    if (dateValue instanceof Date) {
+        if (isNaN(dateValue.getTime())) {
+            return new Date();
+        }
+        return dateValue;
+    }
+
+    if (typeof dateValue === "string") {
+        if (dateValue.includes("T") || /^\d{4}-\d{2}-\d{2}/.test(dateValue)) {
+            const isoMatch = dateValue.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (isoMatch) {
+                const year = parseInt(isoMatch[1], 10);
+                const month = parseInt(isoMatch[2], 10) - 1;
+                const day = parseInt(isoMatch[3], 10);
+                return new Date(Date.UTC(year, month, day));
+            }
+            const date = new Date(dateValue);
+            if (!isNaN(date.getTime())) {
+                return new Date(
+                    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+                );
+            }
+        } else {
+            const date = new Date(dateValue);
+            if (!isNaN(date.getTime())) {
+                return date;
+            }
+        }
+    }
+
+    return new Date();
+};
+
+const formatStatementDate = (dateValue: Date | string | undefined | null): string => {
+    const date = parseInvoiceDate(dateValue);
+
+    const day = date.getUTCDate();
+    const monthIndex = date.getUTCMonth();
+    const year = date.getUTCFullYear().toString().slice(-2);
+
+    const monthNames = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+    const month = monthNames[monthIndex];
+
+    return `${day}-${month}-${year}`;
+};
+
+const formatInvoiceDate = (
+    dateValue: Date | string | undefined | null,
+    options?: Intl.DateTimeFormatOptions
+): string => {
+    if (!dateValue) {
+        return "-";
+    }
+
+    let date: Date;
+    let useLocalComponents = false;
+
+    if (dateValue instanceof Date && !isNaN(dateValue.getTime())) {
+        date = dateValue;
+        useLocalComponents = true;
+    } else {
+        date = parseInvoiceDate(dateValue);
+        useLocalComponents = false;
+    }
+
+    const year = useLocalComponents ? date.getFullYear() : date.getUTCFullYear();
+    const month = useLocalComponents ? date.getMonth() : date.getUTCMonth();
+    const day = useLocalComponents ? date.getDate() : date.getUTCDate();
+
+    const localDate = new Date(year, month, day);
+
+    const formatOptions = options || {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+    };
+
+    return localDate.toLocaleDateString("en-US", formatOptions);
+};
+
 export {
     formatNumberWithCommas,
     formatNumberWithCommasNoDecimals,
@@ -305,4 +393,7 @@ export {
     getNextInvoiceNumber,
     getInvoiceTemplate,
     fileToBuffer,
+    parseInvoiceDate,
+    formatStatementDate,
+    formatInvoiceDate,
 };

@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { InvoiceType } from "@/types";
-import { applyInvoiceBranding } from "@/lib/branding";
-import { formatNumberWithCommas } from "@/lib/helpers";
-import { DATE_OPTIONS } from "@/lib/variables";
+import { formatNumberWithCommas, formatStatementDate } from "@/lib/helpers";
+import { DATE_OPTIONS, LOCAL_STORAGE_SAVED_PAYMENT_INFO_KEY } from "@/lib/variables";
+import { useAuth } from "@/contexts/AuthContext";
 
 // ShadCn
 import {
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Download, Save } from "lucide-react";
 import { BaseButton } from "@/app/components";
 
@@ -39,6 +40,9 @@ type StatementPreviewModalProps = {
     invoices: InvoiceType[];
     clientId?: string;
     clientEmail?: string;
+    initialBilledToName?: string;
+    initialStatementDateFrom?: string;
+    initialStatementDateTo?: string;
     onSaveSuccess?: () => void;
 };
 
@@ -48,6 +52,9 @@ const StatementPreviewModal = ({
     invoices,
     clientId: initialClientId,
     clientEmail: initialClientEmail,
+    initialBilledToName,
+    initialStatementDateFrom,
+    initialStatementDateTo,
     onSaveSuccess,
 }: StatementPreviewModalProps) => {
     const [isGenerating, setIsGenerating] = useState(false);
@@ -57,6 +64,87 @@ const StatementPreviewModal = ({
     const [selectedClientEmail, setSelectedClientEmail] = useState<string>(initialClientEmail || "");
     const [loadingClients, setLoadingClients] = useState(true);
     const [billedToName, setBilledToName] = useState<string>("");
+    const [statementDateFrom, setStatementDateFrom] = useState<string>(
+        new Date().toLocaleDateString("en-US", DATE_OPTIONS)
+    );
+    const [statementDateTo, setStatementDateTo] = useState<string>(
+        new Date().toLocaleDateString("en-US", DATE_OPTIONS)
+    );
+    const [selectedBankDetails, setSelectedBankDetails] = useState<string[]>([]);
+    const [savedPaymentInfo, setSavedPaymentInfo] = useState<PaymentInfoType[]>([]);
+    const { user } = useAuth();
+
+    // Type for saved payment info
+    type PaymentInfoType = {
+        id: string;
+        name: string;
+        bankName: string;
+        accountName: string;
+        accountNumber: string;
+        iban?: string;
+        swiftCode?: string;
+        savedAt: string;
+    };
+
+    // Load saved payment info from MongoDB or localStorage
+    useEffect(() => {
+        const loadPaymentInfo = async () => {
+            if (open) {
+                if (user) {
+                    // Load from MongoDB
+                    try {
+                        const response = await fetch("/api/payment-info/list");
+                        if (response.ok) {
+                            const data = await response.json();
+                            const paymentInfo = data.paymentInfo || [];
+                            setSavedPaymentInfo(paymentInfo);
+                            // Select all saved payment info by default
+                            if (paymentInfo.length > 0) {
+                                setSelectedBankDetails(paymentInfo.map((info: PaymentInfoType) => info.id));
+                            } else {
+                                setSelectedBankDetails([]);
+                            }
+                        } else {
+                            setSavedPaymentInfo([]);
+                            setSelectedBankDetails([]);
+                        }
+                    } catch (error) {
+                        console.error("Error loading payment info:", error);
+                        setSavedPaymentInfo([]);
+                        setSelectedBankDetails([]);
+                    }
+                } else {
+                    // Fallback to localStorage if not logged in
+                    if (typeof window !== "undefined") {
+                        try {
+                            const saved = window.localStorage.getItem(LOCAL_STORAGE_SAVED_PAYMENT_INFO_KEY);
+                            if (saved) {
+                                const parsed = JSON.parse(saved) as PaymentInfoType[];
+                                setSavedPaymentInfo(parsed || []);
+                                if (parsed && parsed.length > 0) {
+                                    setSelectedBankDetails(parsed.map(info => info.id));
+                                } else {
+                                    setSelectedBankDetails([]);
+                                }
+                            } else {
+                                setSavedPaymentInfo([]);
+                                setSelectedBankDetails([]);
+                            }
+                        } catch (error) {
+                            console.error("Error loading saved payment info:", error);
+                            setSavedPaymentInfo([]);
+                            setSelectedBankDetails([]);
+                        }
+                    }
+                }
+            } else {
+                setSavedPaymentInfo([]);
+                setSelectedBankDetails([]);
+            }
+        };
+
+        loadPaymentInfo();
+    }, [open, user]);
 
     // Flatten invoices into passenger rows (one row per item/passenger)
     type PassengerRow = {
@@ -65,43 +153,68 @@ const StatementPreviewModal = ({
         itemIndex: number;
     };
 
-    const passengerRows: PassengerRow[] = [];
+    const [passengerRows, setPassengerRows] = useState<PassengerRow[]>([]);
+    const [totalAmount, setTotalAmount] = useState<number>(0);
+    const [currency, setCurrency] = useState<string>("USD");
     
+    // Auto-adjust: Recalculate totals when invoices change
+    useEffect(() => {
     // Sort invoices by date first
     const sortedInvoices = [...invoices].sort((a, b) => {
-        const dateA = new Date(a.details.invoiceDate).getTime();
-        const dateB = new Date(b.details.invoiceDate).getTime();
+        const dateA = a.details.invoiceDate ? new Date(a.details.invoiceDate).getTime() : 0;
+        const dateB = b.details.invoiceDate ? new Date(b.details.invoiceDate).getTime() : 0;
         return dateA - dateB;
     });
 
     // Create a row for each passenger (item) in each invoice
+        const rows: PassengerRow[] = [];
     sortedInvoices.forEach((invoice) => {
         invoice.details.items.forEach((item, itemIndex) => {
-            passengerRows.push({ invoice, item, itemIndex });
+                rows.push({ invoice, item, itemIndex });
+            });
         });
-    });
 
-    // Calculate total amount from all items
-    const totalAmount = passengerRows.reduce((sum, row) => {
+        setPassengerRows(rows);
+
+        // Calculate total amount from all items (auto-adjust)
+        const calculatedTotal = rows.reduce((sum, row) => {
         return sum + (Number(row.item.total) || 0);
     }, 0);
 
-    // Get currency from first invoice (assuming all invoices use same currency)
-    const currency = invoices[0]?.details.currency || "USD";
+        setTotalAmount(calculatedTotal);
 
-    // Load clients when modal opens
+    // Get currency from first invoice (assuming all invoices use same currency)
+        setCurrency(invoices[0]?.details.currency || "USD");
+    }, [invoices]);
+
+    // Load clients and hydrate saved statement fields when modal opens
     useEffect(() => {
         if (open) {
             fetchClients();
-            // Set initial client if provided
             if (initialClientId) {
                 setSelectedClientId(initialClientId);
             }
             if (initialClientEmail) {
                 setSelectedClientEmail(initialClientEmail);
             }
+            if (initialBilledToName) {
+                setBilledToName(initialBilledToName);
+            }
+            if (initialStatementDateFrom) {
+                setStatementDateFrom(initialStatementDateFrom);
+            }
+            if (initialStatementDateTo) {
+                setStatementDateTo(initialStatementDateTo);
+            }
         }
-    }, [open, initialClientId, initialClientEmail]);
+    }, [
+        open,
+        initialClientId,
+        initialClientEmail,
+        initialBilledToName,
+        initialStatementDateFrom,
+        initialStatementDateTo,
+    ]);
 
     const fetchClients = async () => {
         try {
@@ -128,25 +241,36 @@ const StatementPreviewModal = ({
         }
     };
 
-    // Format date like "21-Dec-22"
-    const formatDate = (date: Date) => {
-        const day = date.getDate();
-        const month = date.toLocaleDateString("en-US", { month: "short" });
-        const year = date.getFullYear().toString().slice(-2);
-        return `${day}-${month}-${year}`;
+    // Format date like "21-Dec-22" - using helper function for consistency
+    const formatDate = (dateValue: Date | string | undefined | null) => {
+        return formatStatementDate(dateValue);
     };
 
     const handleDownload = async () => {
         setIsGenerating(true);
         try {
+            // Get selected bank details from saved payment info
+            const selectedBankDetailsData = savedPaymentInfo.filter(info => 
+                selectedBankDetails.includes(info.id)
+            ).map(info => ({
+                bankName: info.bankName,
+                accountName: info.accountName,
+                accountNumber: info.accountNumber,
+                iban: info.iban,
+                swiftCode: info.swiftCode,
+            }));
+
             const response = await fetch("/api/invoice/statement", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({ 
-                    invoices: invoices.map(applyInvoiceBranding),
+                    invoices,
                     billedToName: billedToName.trim() || undefined,
+                    statementDateFrom: statementDateFrom.trim() || undefined,
+                    statementDateTo: statementDateTo.trim() || undefined,
+                    bankDetails: selectedBankDetailsData.length > 0 ? selectedBankDetailsData : undefined,
                 }),
             });
 
@@ -184,17 +308,31 @@ const StatementPreviewModal = ({
 
         setIsSaving(true);
         try {
+            // Get selected bank details from saved payment info
+            const selectedBankDetailsData = savedPaymentInfo.filter(info => 
+                selectedBankDetails.includes(info.id)
+            ).map(info => ({
+                bankName: info.bankName,
+                accountName: info.accountName,
+                accountNumber: info.accountNumber,
+                iban: info.iban,
+                swiftCode: info.swiftCode,
+            }));
+
             const response = await fetch("/api/statement/save", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    invoices: invoices.map(applyInvoiceBranding),
+                    invoices,
                     title: "STATEMENT",
                     clientId: selectedClientId,
                     clientEmail: selectedClientEmail,
                     billedToName: billedToName.trim(),
+                    statementDateFrom: statementDateFrom.trim() || undefined,
+                    statementDateTo: statementDateTo.trim() || undefined,
+                    bankDetails: selectedBankDetailsData.length > 0 ? selectedBankDetailsData : undefined,
                 }),
             });
 
@@ -292,6 +430,115 @@ const StatementPreviewModal = ({
                             className="w-full"
                         />
                     </div>
+
+                    {/* Statement Date Range Input */}
+                    <div className="flex flex-col gap-2">
+                        <Label className="text-sm font-semibold">
+                            Statement Date Range (Generated Date)
+                        </Label>
+                        <div className="flex gap-2 items-center">
+                            <div className="flex-1 flex flex-col gap-1">
+                                <Label htmlFor="statement-date-from" className="text-xs text-gray-600">
+                                    From Date
+                                </Label>
+                                <Input
+                                    id="statement-date-from"
+                                    type="text"
+                                    placeholder="e.g., January 1, 2024"
+                                    value={statementDateFrom}
+                                    onChange={(e) => setStatementDateFrom(e.target.value)}
+                                    className="w-full"
+                                />
+                            </div>
+                            <div className="pt-6 text-gray-500">-</div>
+                            <div className="flex-1 flex flex-col gap-1">
+                                <Label htmlFor="statement-date-to" className="text-xs text-gray-600">
+                                    To Date
+                                </Label>
+                                <Input
+                                    id="statement-date-to"
+                                    type="text"
+                                    placeholder="e.g., January 31, 2024"
+                                    value={statementDateTo}
+                                    onChange={(e) => setStatementDateTo(e.target.value)}
+                                    className="w-full"
+                                />
+                            </div>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                            These dates will appear in the "Generated:" field in the PDF as "From [date] - To [date]". You can edit them manually.
+                        </p>
+                    </div>
+
+                    {/* Bank Details Selection */}
+                    {savedPaymentInfo.length > 0 ? (
+                        <div className="flex flex-col gap-2">
+                            <Label className="text-sm font-semibold">
+                                Bank Details (Select which saved bank details to include)
+                            </Label>
+                            <div className="border border-gray-300 dark:border-gray-700 rounded-lg p-3 space-y-3 max-h-60 overflow-y-auto">
+                                {savedPaymentInfo.map((paymentInfo) => (
+                                    <div 
+                                        key={paymentInfo.id}
+                                        className="flex items-start gap-3 p-2 border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-800"
+                                    >
+                                        <Checkbox
+                                            id={`bank-${paymentInfo.id}`}
+                                            checked={selectedBankDetails.includes(paymentInfo.id)}
+                                            onCheckedChange={(checked) => {
+                                                if (checked) {
+                                                    setSelectedBankDetails([...selectedBankDetails, paymentInfo.id]);
+                                                } else {
+                                                    setSelectedBankDetails(selectedBankDetails.filter(id => id !== paymentInfo.id));
+                                                }
+                                            }}
+                                            className="mt-1"
+                                        />
+                                        <Label 
+                                            htmlFor={`bank-${paymentInfo.id}`}
+                                            className="flex-1 cursor-pointer"
+                                        >
+                                            <div className="text-sm">
+                                                <p className="font-semibold">{paymentInfo.name || paymentInfo.bankName}</p>
+                                                <p className="text-gray-500 text-xs mb-1">Saved: {paymentInfo.savedAt}</p>
+                                                <p className="font-medium text-gray-700 dark:text-gray-300">{paymentInfo.bankName}</p>
+                                                <p className="text-gray-600 dark:text-gray-400">
+                                                    Account: {paymentInfo.accountName}
+                                                </p>
+                                                <p className="text-gray-600 dark:text-gray-400">
+                                                    Account #: {paymentInfo.accountNumber}
+                                                </p>
+                                                {paymentInfo.iban && (
+                                                    <p className="text-gray-600 dark:text-gray-400">
+                                                        IBAN: {paymentInfo.iban}
+                                                    </p>
+                                                )}
+                                                {paymentInfo.swiftCode && (
+                                                    <p className="text-gray-600 dark:text-gray-400">
+                                                        SWIFT: {paymentInfo.swiftCode}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </Label>
+                                    </div>
+                                ))}
+                            </div>
+                            <p className="text-xs text-gray-500">
+                                Select which saved bank details to include in the statement PDF. Only saved payment information is shown here.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col gap-2">
+                            <Label className="text-sm font-semibold">
+                                Bank Details
+                            </Label>
+                            <div className="border border-gray-300 dark:border-gray-700 rounded-lg p-4 text-center">
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    No saved payment information found. Please save payment information in the invoice form first.
+                                </p>
+                            </div>
+                        </div>
+                    )}
                     {/* Table */}
                     <div className="border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden">
                         <div className="overflow-x-auto">
@@ -320,8 +567,8 @@ const StatementPreviewModal = ({
                                         const invoice = row.invoice;
                                         const item = row.item;
                                         
-                                        const invoiceDate = new Date(invoice.details.invoiceDate);
-                                        const formattedDate = formatDate(invoiceDate);
+                                        // Use helper function to format date consistently and avoid timezone issues
+                                        const formattedDate = formatStatementDate(invoice.details.invoiceDate);
 
                                         // Get route from this specific item's description, service type, or name
                                         const route = item.description || item.serviceType || item.name || "-";

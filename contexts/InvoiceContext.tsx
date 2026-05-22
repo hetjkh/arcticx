@@ -27,8 +27,6 @@ import { saveFileToDirectory } from "@/services/invoice/client/downloadToDirecto
 
 // Variables
 import {
-  DEFAULT_INVOICE_LOGO,
-  DEFAULT_INVOICE_SIGNATURE,
   FORM_DEFAULT_VALUES,
   GENERATE_PDF_API,
   SEND_PDF_API,
@@ -36,17 +34,49 @@ import {
   LOCAL_STORAGE_INVOICE_DRAFT_KEY,
 } from "@/lib/variables";
 
+// Brand assets
+import {
+  withDefaultBrandAssets,
+  withDefaultBrandAssetsList,
+  DEFAULT_INVOICE_LOGO,
+  DEFAULT_INVOICE_SIGNATURE,
+} from "@/lib/brandAssets";
+
 // Helpers
 import { getNextInvoiceNumber } from "@/lib/helpers";
-import { applyInvoiceBranding } from "@/lib/branding";
+import {
+  buildInvoiceListQueryString,
+  type InvoiceListFilterParams,
+} from "@/lib/invoiceListQuery";
 
 // Types
 import { ExportTypes, InvoiceType } from "@/types";
+
+export type InvoiceListStats = {
+  matchingCount: number;
+  totalAmount: number;
+  uniqueCurrencies: number;
+};
+
+const INVOICE_LIST_PAGE_SIZE = 5;
+
+const defaultInvoiceListStats: InvoiceListStats = {
+  matchingCount: 0,
+  totalAmount: 0,
+  uniqueCurrencies: 0,
+};
 
 const defaultInvoiceContext = {
   invoicePdf: new Blob(),
   invoicePdfLoading: false,
   savedInvoices: [] as InvoiceType[],
+  hasMoreInvoices: false,
+  loadingInvoices: false,
+  totalInvoiceCount: 0,
+  filteredInvoiceCount: 0,
+  invoiceListStats: defaultInvoiceListStats,
+  reloadInvoiceList: async (_filters?: InvoiceListFilterParams) => {},
+  loadMoreInvoices: async () => {},
   pdfUrl: null as string | null,
   onFormSubmit: (values: InvoiceType) => {},
   newInvoice: () => {},
@@ -101,45 +131,135 @@ export const InvoiceContextProvider = ({
 
   // Saved invoices
   const [savedInvoices, setSavedInvoices] = useState<InvoiceType[]>([]);
+  const [hasMoreInvoices, setHasMoreInvoices] = useState<boolean>(false);
+  const [loadingInvoices, setLoadingInvoices] = useState<boolean>(false);
+  const [totalInvoiceCount, setTotalInvoiceCount] = useState<number>(0);
+  const [filteredInvoiceCount, setFilteredInvoiceCount] = useState<number>(0);
+  const [invoiceListStats, setInvoiceListStats] =
+    useState<InvoiceListStats>(defaultInvoiceListStats);
+  const invoiceListFiltersRef = React.useRef<InvoiceListFilterParams>({
+    sort: "date-desc",
+  });
+
+  const applyInvoiceListResponse = useCallback(
+    (data: {
+      invoices?: InvoiceType[];
+      hasMore?: boolean;
+      totalCount?: number;
+      filteredCount?: number;
+      stats?: InvoiceListStats;
+    }, append: boolean) => {
+      const list = withDefaultBrandAssetsList(data.invoices || []);
+      setSavedInvoices((prev) => (append ? [...prev, ...list] : list));
+      setHasMoreInvoices(data.hasMore || false);
+      setTotalInvoiceCount(data.totalCount || 0);
+      setFilteredInvoiceCount(data.filteredCount ?? data.totalCount ?? 0);
+      if (data.stats) {
+        setInvoiceListStats(data.stats);
+      }
+    },
+    []
+  );
+
+  const fetchInvoiceListPage = useCallback(
+    async (skip: number, append: boolean) => {
+      const qs = buildInvoiceListQueryString(
+        skip,
+        INVOICE_LIST_PAGE_SIZE,
+        invoiceListFiltersRef.current
+      );
+      const response = await fetch(`/api/invoice/list?${qs}`, { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error("Failed to fetch invoices");
+      }
+      const data = await response.json();
+      applyInvoiceListResponse(data, append);
+    },
+    [applyInvoiceListResponse]
+  );
+
+  const reloadInvoiceList = useCallback(
+    async (filters?: InvoiceListFilterParams) => {
+      if (!user) return;
+      if (filters) {
+        invoiceListFiltersRef.current = {
+          ...invoiceListFiltersRef.current,
+          ...filters,
+        };
+      }
+      setLoadingInvoices(true);
+      try {
+        await fetchInvoiceListPage(0, false);
+      } catch (error) {
+        console.error("Error loading invoices:", error);
+        setSavedInvoices([]);
+        setHasMoreInvoices(false);
+        setFilteredInvoiceCount(0);
+        setInvoiceListStats(defaultInvoiceListStats);
+      } finally {
+        setLoadingInvoices(false);
+      }
+    },
+    [user, fetchInvoiceListPage]
+  );
 
   // Load invoices from database or localStorage
   useEffect(() => {
     const loadInvoices = async () => {
       if (user) {
-        // Load from database
+        invoiceListFiltersRef.current = { sort: "date-desc" };
+        setLoadingInvoices(true);
         try {
-          const response = await fetch("/api/invoice/list");
-          if (response.ok) {
-            const data = await response.json();
-            setSavedInvoices(data.invoices || []);
-          } else {
-            setSavedInvoices([]);
-          }
+          await fetchInvoiceListPage(0, false);
         } catch (error) {
           console.error("Error loading invoices:", error);
           setSavedInvoices([]);
+          setHasMoreInvoices(false);
+          setTotalInvoiceCount(0);
+          setFilteredInvoiceCount(0);
+          setInvoiceListStats(defaultInvoiceListStats);
+        } finally {
+          setLoadingInvoices(false);
         }
       } else {
-        // Load from localStorage
+        // Load from localStorage (no pagination for localStorage)
         if (typeof window !== "undefined") {
           try {
             const savedInvoicesJSON = window.localStorage.getItem("savedInvoices");
             const savedInvoicesDefault = savedInvoicesJSON
               ? JSON.parse(savedInvoicesJSON)
               : [];
-            setSavedInvoices(savedInvoicesDefault);
+            setSavedInvoices(withDefaultBrandAssetsList(savedInvoicesDefault));
+            setHasMoreInvoices(false);
+            setTotalInvoiceCount(savedInvoicesDefault.length);
           } catch (error) {
             console.error("Error parsing saved invoices from localStorage:", error);
             // Clear corrupted data
             window.localStorage.removeItem("savedInvoices");
             setSavedInvoices([]);
+            setHasMoreInvoices(false);
+            setTotalInvoiceCount(0);
           }
         }
       }
     };
 
     loadInvoices();
-  }, [user]);
+  }, [user, fetchInvoiceListPage]);
+
+  // Function to load more invoices (same filters/search as current list)
+  const loadMoreInvoices = async () => {
+    if (!user || loadingInvoices || !hasMoreInvoices) return;
+
+    setLoadingInvoices(true);
+    try {
+      await fetchInvoiceListPage(savedInvoices.length, true);
+    } catch (error) {
+      console.error("Error loading more invoices:", error);
+    } finally {
+      setLoadingInvoices(false);
+    }
+  };
 
   // Load invoice by ID from query parameter
   useEffect(() => {
@@ -178,8 +298,8 @@ export const InvoiceContextProvider = ({
               invoice.receiver.phone = [""];
             }
             
-            // Reset form with invoice data (always default branding)
-            reset(applyInvoiceBranding(invoice));
+            // Reset form with invoice data
+            reset(withDefaultBrandAssets(invoice));
             
             // Remove query parameter from URL
             const url = new URL(window.location.href);
@@ -196,12 +316,6 @@ export const InvoiceContextProvider = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, user]);
 
-  // Always use fixed company logo and signature
-  useEffect(() => {
-    setValue("details.invoiceLogo", DEFAULT_INVOICE_LOGO);
-    setValue("details.signature.data", DEFAULT_INVOICE_SIGNATURE);
-  }, [setValue]);
-
   // Persist full form state with debounce
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -209,7 +323,7 @@ export const InvoiceContextProvider = ({
       try {
         window.localStorage.setItem(
           LOCAL_STORAGE_INVOICE_DRAFT_KEY,
-          JSON.stringify(value)
+          JSON.stringify(withDefaultBrandAssets(value as InvoiceType))
         );
       } catch {}
     });
@@ -230,7 +344,11 @@ export const InvoiceContextProvider = ({
    * @param {InvoiceType} data - The form values used to generate the PDF.
    */
   const onFormSubmit = (data: InvoiceType) => {
-    generatePdf(applyInvoiceBranding(data));
+    console.log("VALUE");
+    console.log(data);
+
+    // Call generate pdf method
+    generatePdf(withDefaultBrandAssets(data));
   };
 
   /**
@@ -368,7 +486,7 @@ export const InvoiceContextProvider = ({
     if (invoicePdf) {
       // If get values function is provided, allow to save the invoice
       if (getValues) {
-        const formValues = applyInvoiceBranding(getValues());
+        const formValues = withDefaultBrandAssets(getValues());
         const updatedDate = new Date().toLocaleDateString(
           "en-US",
           SHORT_DATE_OPTIONS
@@ -503,27 +621,16 @@ export const InvoiceContextProvider = ({
               description: "Invoice deleted successfully",
             });
             
-            // Reload invoices from database to ensure consistency across all views
+            // Reload invoices from database with current filters/stats
             try {
-              const listResponse = await fetch("/api/invoice/list", {
-                cache: "no-store",
-              });
-              if (listResponse.ok) {
-                const data = await listResponse.json();
-                setSavedInvoices(data.invoices || []);
-              } else {
-                console.error("Failed to reload invoices after delete");
-                // Fallback: Remove from local state if reload fails
-                const updatedInvoices = [...savedInvoices];
-                updatedInvoices.splice(index, 1);
-                setSavedInvoices(updatedInvoices);
-              }
+              await fetchInvoiceListPage(0, false);
             } catch (reloadError) {
               console.error("Error reloading invoices:", reloadError);
-              // Fallback: Remove from local state if reload fails
               const updatedInvoices = [...savedInvoices];
               updatedInvoices.splice(index, 1);
               setSavedInvoices(updatedInvoices);
+              setTotalInvoiceCount(totalInvoiceCount - 1);
+              setFilteredInvoiceCount(Math.max(0, filteredInvoiceCount - 1));
             }
           } else {
             const error = await response.json();
@@ -615,7 +722,10 @@ export const InvoiceContextProvider = ({
    * @param {ExportTypes} exportAs - The format in which to export the invoice.
    */
   const exportInvoiceAs = (exportAs: ExportTypes) => {
-    exportInvoice(exportAs, applyInvoiceBranding(getValues()));
+    const formValues = getValues();
+
+    // Service to export invoice with given parameters
+    exportInvoice(exportAs, formValues);
   };
 
   /**
@@ -763,7 +873,8 @@ export const InvoiceContextProvider = ({
       }
     }
 
-    reset(applyInvoiceBranding(importedData));
+    // Reset form with imported data
+    reset(importedData);
     
     // Show success toast
     importInvoiceSuccess();
@@ -803,6 +914,13 @@ export const InvoiceContextProvider = ({
         invoicePdf,
         invoicePdfLoading,
         savedInvoices,
+        hasMoreInvoices,
+        loadingInvoices,
+        totalInvoiceCount,
+        filteredInvoiceCount,
+        invoiceListStats,
+        reloadInvoiceList,
+        loadMoreInvoices,
         pdfUrl,
         onFormSubmit,
         newInvoice,

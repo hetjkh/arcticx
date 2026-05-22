@@ -18,7 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useInvoiceSettings } from "@/contexts/InvoiceSettingsContext";
 
 // Icons
-import { LogOut, User, Users, Settings } from "lucide-react";
+import { FolderOpen, LogOut, Receipt, User, Users, Settings } from "lucide-react";
 
 const BaseNavbar = () => {
     const { user, logout } = useAuth();
@@ -66,12 +66,26 @@ const BaseNavbar = () => {
                             </BaseButton>
                         )}
                         {user && (
-                            <Link href="/clients">
-                                <BaseButton variant="ghost" size="sm" tooltipLabel="Clients">
-                                    <Users className="w-4 h-4 mr-2" />
-                                    Clients
-                                </BaseButton>
-                            </Link>
+                            <>
+                                <Link href="/invoices">
+                                    <BaseButton variant="ghost" size="sm" tooltipLabel="Saved invoices">
+                                        <FolderOpen className="w-4 h-4 mr-2" />
+                                        Invoices
+                                    </BaseButton>
+                                </Link>
+                                <Link href="/statements">
+                                    <BaseButton variant="ghost" size="sm" tooltipLabel="Saved statements">
+                                        <Receipt className="w-4 h-4 mr-2" />
+                                        Statements
+                                    </BaseButton>
+                                </Link>
+                                <Link href="/clients">
+                                    <BaseButton variant="ghost" size="sm" tooltipLabel="Clients">
+                                        <Users className="w-4 h-4 mr-2" />
+                                        Clients
+                                    </BaseButton>
+                                </Link>
+                            </>
                         )}
                         <LanguageSelector />
                         <ThemeSwitcher />

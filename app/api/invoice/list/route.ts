@@ -3,9 +3,13 @@ import { getCurrentUser } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { InvoiceDocument } from "@/models/Invoice";
 import { InvoiceType } from "@/types";
-import { applyInvoiceBranding } from "@/lib/branding";
 import { SHORT_DATE_OPTIONS } from "@/lib/variables";
-import { ObjectId } from "mongodb";
+import { withDefaultBrandAssets } from "@/lib/brandAssets";
+import { parseInvoiceListParams } from "@/lib/invoiceListQuery";
+import {
+    buildInvoiceListFilter,
+    buildInvoiceListSort,
+} from "@/lib/invoiceListQuery.server";
 
 export async function GET(req: NextRequest) {
     try {
@@ -18,45 +22,86 @@ export async function GET(req: NextRequest) {
             );
         }
 
+        const { searchParams } = new URL(req.url);
+        const limit = parseInt(searchParams.get("limit") || "5", 10);
+        const skip = parseInt(searchParams.get("skip") || "0", 10);
+        const filterParams = parseInvoiceListParams(searchParams);
+        const filter = buildInvoiceListFilter(user.userId, filterParams);
+        const sort = buildInvoiceListSort(filterParams.sort);
+
         const db = await getDb();
         const invoicesCollection = db.collection<InvoiceDocument>("invoices");
 
-        const invoices = await invoicesCollection
-            .find({ userId: new ObjectId(user.userId) })
-            .sort({ updatedAt: -1 })
-            .toArray();
+        const [filteredCount, statsRows, invoices] = await Promise.all([
+            invoicesCollection.countDocuments(filter),
+            invoicesCollection
+                .aggregate([
+                    { $match: filter },
+                    {
+                        $group: {
+                            _id: null,
+                            totalAmount: {
+                                $sum: {
+                                    $convert: {
+                                        input: "$details.totalAmount",
+                                        to: "double",
+                                        onError: 0,
+                                        onNull: 0,
+                                    },
+                                },
+                            },
+                            currencies: { $addToSet: "$details.currency" },
+                        },
+                    },
+                ])
+                .toArray(),
+            invoicesCollection.find(filter).sort(sort).skip(skip).limit(limit).toArray(),
+        ]);
 
-        // Remove MongoDB-specific fields and convert to plain objects
+        const totalCount = await invoicesCollection.countDocuments({
+            userId: filter.userId,
+        });
+
+        const statsDoc = statsRows[0] as
+            | { totalAmount?: number; currencies?: string[] }
+            | undefined;
+
         const formattedInvoices = invoices.map((invoice) => {
             const { _id, userId, createdAt, updatedAt, ...invoiceData } = invoice;
-            // Format updatedAt for display
-            const updatedAtString = updatedAt 
+            const updatedAtString = updatedAt
                 ? new Date(updatedAt).toLocaleDateString("en-US", SHORT_DATE_OPTIONS)
                 : new Date().toLocaleDateString("en-US", SHORT_DATE_OPTIONS);
-            
-            const branded = applyInvoiceBranding({
-                ...invoiceData,
-                details: {
-                    ...invoiceData.details,
-                    updatedAt: updatedAtString,
-                },
-            } as InvoiceType);
+
+            const branded = withDefaultBrandAssets(invoiceData as InvoiceType);
             return {
                 ...branded,
                 id: _id!.toString(),
+                details: {
+                    ...branded.details,
+                    updatedAt: updatedAtString,
+                },
             };
         });
 
         const response = NextResponse.json(
-            { invoices: formattedInvoices },
+            {
+                invoices: formattedInvoices,
+                totalCount,
+                filteredCount,
+                hasMore: skip + limit < filteredCount,
+                stats: {
+                    matchingCount: filteredCount,
+                    totalAmount: statsDoc?.totalAmount ?? 0,
+                    uniqueCurrencies: (statsDoc?.currencies ?? []).filter(Boolean).length,
+                },
+            },
             { status: 200 }
         );
-        
-        // Prevent caching to ensure fresh data
+
         response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         response.headers.set("Pragma", "no-cache");
         response.headers.set("Expires", "0");
-        
+
         return response;
     } catch (error) {
         console.error("Get invoices error:", error);
@@ -66,4 +111,3 @@ export async function GET(req: NextRequest) {
         );
     }
 }
-
